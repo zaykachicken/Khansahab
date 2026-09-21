@@ -1,0 +1,6 @@
+{
+  "name": "Zayka",
+  "description": "Zayka — Zomato & Swiggy-style food delivery app for ZaykaChicken Cafe & Restaurant with live tracking, menu customization, cart, and restaurant admin management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
