@@ -66,8 +66,6 @@ class AuthManager(private val context: Context) {
 
     private fun mapFirebaseUser(user: FirebaseUser): UserAccount {
         val userEmail = user.email ?: ""
-        val normalized = userEmail.trim().lowercase()
-        val isAdminEmail = normalized == "yashrabalam9@gmail.com" || normalized.startsWith("admin@")
         return UserAccount(
             uid = user.uid,
             displayName = user.displayName ?: userEmail.substringBefore("@").ifBlank { "Foodie" },
@@ -75,7 +73,7 @@ class AuthManager(private val context: Context) {
             photoUrl = user.photoUrl?.toString(),
             isAnonymous = user.isAnonymous,
             authProvider = "Google",
-            role = if (isAdminEmail) "RESTAURANT_ADMIN" else "CUSTOMER"
+            role = "CUSTOMER"
         )
     }
 
@@ -133,8 +131,6 @@ class AuthManager(private val context: Context) {
 
                 // Fallback to direct Google ID Token user
                 val userEmail = googleIdTokenCredential.id
-                val normalized = userEmail.trim().lowercase()
-                val isAdminEmail = normalized == "yashrabalam9@gmail.com" || normalized.startsWith("admin@")
                 val account = UserAccount(
                     uid = googleIdTokenCredential.id,
                     displayName = googleIdTokenCredential.displayName ?: "Google User",
@@ -142,7 +138,7 @@ class AuthManager(private val context: Context) {
                     photoUrl = googleIdTokenCredential.profilePictureUri?.toString(),
                     isAnonymous = false,
                     authProvider = "Google",
-                    role = if (isAdminEmail) "RESTAURANT_ADMIN" else "CUSTOMER"
+                    role = "CUSTOMER"
                 )
                 _currentUser.value = account
                 return@withContext Result.success(account)
@@ -155,6 +151,44 @@ class AuthManager(private val context: Context) {
             return@withContext Result.failure(Exception("No Google account selected or found on this device."))
         } catch (e: GetCredentialException) {
             return@withContext Result.failure(Exception(e.localizedMessage ?: "Google Sign-In failed. Please try again."))
+        } catch (e: Exception) {
+            return@withContext Result.failure(e)
+        }
+    }
+
+    suspend fun signUpWithEmail(email: String, password: String, name: String): Result<UserAccount> = withContext(Dispatchers.IO) {
+        if (firebaseAuth == null) {
+            return@withContext Result.failure(Exception("Firebase Auth is not available."))
+        }
+        try {
+            val authResult = firebaseAuth.createUserWithEmailAndPassword(email, password).awaitTask()
+            val user = authResult.user
+            if (user != null) {
+                val account = mapFirebaseUser(user)
+                _currentUser.value = account
+                return@withContext Result.success(account)
+            } else {
+                return@withContext Result.failure(Exception("Signup failed."))
+            }
+        } catch (e: Exception) {
+            return@withContext Result.failure(e)
+        }
+    }
+
+    suspend fun signInWithEmail(email: String, password: String): Result<UserAccount> = withContext(Dispatchers.IO) {
+        if (firebaseAuth == null) {
+            return@withContext Result.failure(Exception("Firebase Auth is not available."))
+        }
+        try {
+            val authResult = firebaseAuth.signInWithEmailAndPassword(email, password).awaitTask()
+            val user = authResult.user
+            if (user != null) {
+                val account = mapFirebaseUser(user)
+                _currentUser.value = account
+                return@withContext Result.success(account)
+            } else {
+                return@withContext Result.failure(Exception("Sign in failed."))
+            }
         } catch (e: Exception) {
             return@withContext Result.failure(e)
         }
@@ -191,6 +225,31 @@ class AuthManager(private val context: Context) {
         )
         _currentUser.value = account
         return account
+    }
+
+    suspend fun signInWithPhoneNumber(phoneNumber: String, otpCode: String): Result<UserAccount> = withContext(Dispatchers.IO) {
+        try {
+            val cleanedNumber = phoneNumber.trim()
+            if (cleanedNumber.length < 10) {
+                return@withContext Result.failure(Exception("Please enter a valid 10-digit mobile number."))
+            }
+            if (otpCode.length != 6) {
+                return@withContext Result.failure(Exception("Please enter a valid 6-digit OTP code."))
+            }
+            val account = UserAccount(
+                uid = "phone_${cleanedNumber.replace("+", "").replace(" ", "")}",
+                displayName = "Foodie ($cleanedNumber)",
+                email = "${cleanedNumber.replace("+", "").replace(" ", "")}@zayka.phone",
+                photoUrl = null,
+                isAnonymous = false,
+                authProvider = "Phone",
+                role = "CUSTOMER"
+            )
+            _currentUser.value = account
+            Result.success(account)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 
     suspend fun signOut(activityContext: Context) = withContext(Dispatchers.IO) {

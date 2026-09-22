@@ -188,6 +188,31 @@ fun RestaurantLoginScreen(
                 colors = CardDefaults.cardColors(containerColor = Color(0xFF27272E))
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
+                    // Admin Credentials Helper Card
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 16.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        color = Color(0xFF1E1E24),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF00E676).copy(alpha = 0.5f))
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(
+                                text = "🔐 Admin ID & Password Help",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF00E676)
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Admin ID: restaurant@zayka.com\nPassword: admin123",
+                                fontSize = 11.sp,
+                                color = Color(0xFFDDDDDD)
+                            )
+                        }
+                    }
+
                     // Error banner
                     AnimatedVisibility(
                         visible = authError != null,

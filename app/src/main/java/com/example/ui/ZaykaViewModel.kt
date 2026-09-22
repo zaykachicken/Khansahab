@@ -567,6 +567,25 @@ class ZaykaViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun signInWithPhoneNumber(
+        phoneNumber: String,
+        otpCode: String,
+        onSuccess: () -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            _authLoading.value = true
+            _authError.value = null
+            val result = authManager.signInWithPhoneNumber(phoneNumber, otpCode)
+            _authLoading.value = false
+            result.onSuccess {
+                _authError.value = null
+                onSuccess()
+            }.onFailure { ex ->
+                _authError.value = ex.message ?: "Phone number verification failed."
+            }
+        }
+    }
+
     // Direct Restaurant Email Authentication: Restaurant has dedicated access
     fun signInAsRestaurant(
         email: String,
@@ -639,7 +658,7 @@ class ZaykaViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     // Authentication functions
-    fun signInWithGoogle(activity: Activity, onSuccess: () -> Unit = {}) {
+    fun signInWithGoogle(activity: Activity, onSuccess: () -> Unit = {}, onFailure: (String) -> Unit = {}) {
         viewModelScope.launch {
             _authLoading.value = true
             _authError.value = null
@@ -649,8 +668,39 @@ class ZaykaViewModel(application: Application) : AndroidViewModel(application) {
                 _authError.value = null
                 onSuccess()
             }.onFailure { ex ->
-                val msg = ex.message ?: "Google Sign-In failed. Please check your network and Google Play Services."
+                val msg = ex.message ?: "Google Sign-In failed"
                 _authError.value = msg
+                onFailure(msg)
+            }
+        }
+    }
+
+    fun signUpWithEmail(email: String, password: String, name: String, onSuccess: () -> Unit = {}) {
+        viewModelScope.launch {
+            _authLoading.value = true
+            _authError.value = null
+            val result = authManager.signUpWithEmail(email, password, name)
+            _authLoading.value = false
+            result.onSuccess {
+                _authError.value = null
+                onSuccess()
+            }.onFailure { ex ->
+                _authError.value = ex.message ?: "Sign up failed"
+            }
+        }
+    }
+
+    fun signInWithEmail(email: String, password: String, onSuccess: () -> Unit = {}) {
+        viewModelScope.launch {
+            _authLoading.value = true
+            _authError.value = null
+            val result = authManager.signInWithEmail(email, password)
+            _authLoading.value = false
+            result.onSuccess {
+                _authError.value = null
+                onSuccess()
+            }.onFailure { ex ->
+                _authError.value = ex.message ?: "Sign in failed"
             }
         }
     }

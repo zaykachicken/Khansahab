@@ -37,7 +37,7 @@ jobs:
           fi
 
       - name: Set up Gradle 9.3.1
-        uses: gradle/actions/setup-gradle@v3
+        uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.3.1'
 
@@ -147,6 +147,7 @@ jobs:
             --notes "$NOTES"
 
       - name: Report APK download result
+        if: always()
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

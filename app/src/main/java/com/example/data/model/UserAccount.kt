@@ -10,10 +10,5 @@ data class UserAccount(
     val role: String = "CUSTOMER" // "CUSTOMER" or "RESTAURANT_ADMIN"
 ) {
     val isAdmin: Boolean
-        get() {
-            val normalized = email.trim().lowercase()
-            return role == "RESTAURANT_ADMIN" ||
-                    normalized == "yashrabalam9@gmail.com" ||
-                    normalized.startsWith("admin@")
-        }
+        get() = role == "RESTAURANT_ADMIN"
 }

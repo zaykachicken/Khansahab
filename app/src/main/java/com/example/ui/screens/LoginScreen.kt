@@ -47,9 +47,16 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -218,7 +225,7 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Authentication Container Card
+             // Authentication Container Card
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -227,14 +234,80 @@ fun LoginScreen(
                 colors = CardDefaults.cardColors(containerColor = Color.White),
                 elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
             ) {
+                var authType by remember { mutableStateOf("Google/Email") } // "Google/Email" or "Phone"
+                var isSignUpMode by remember { mutableStateOf(false) }
+                var emailInput by remember { mutableStateOf("") }
+                var passwordInput by remember { mutableStateOf("") }
+                var nameInput by remember { mutableStateOf("") }
+                var phoneInput by remember { mutableStateOf("") }
+                var otpInput by remember { mutableStateOf("") }
+                var showCustomGoogleDialog by remember { mutableStateOf(false) }
+                var customGoogleEmail by remember { mutableStateOf("") }
+                var customGoogleName by remember { mutableStateOf("") }
+
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
+                    // Auth Type Selector (Google/Email vs Phone OTP)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color(0xFFF1F3F5), RoundedCornerShape(12.dp))
+                            .padding(4.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        Surface(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(38.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .clickable { authType = "Google/Email" },
+                            color = if (authType == "Google/Email") Color.White else Color.Transparent,
+                            shadowElevation = if (authType == "Google/Email") 2.dp else 0.dp
+                        ) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "Google / Email",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (authType == "Google/Email") com.example.ui.theme.Primary else TextSecondaryLight
+                                )
+                            }
+                        }
+
+                        Surface(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(38.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .clickable { authType = "Phone" },
+                            color = if (authType == "Phone") Color.White else Color.Transparent,
+                            shadowElevation = if (authType == "Phone") 2.dp else 0.dp
+                        ) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "Phone OTP",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (authType == "Phone") com.example.ui.theme.Primary else TextSecondaryLight
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(18.dp))
+
                     Text(
-                        text = "Sign in to continue",
+                        text = if (authType == "Phone") "Sign in with Mobile Number" else (if (isSignUpMode) "Create your Zayka account" else "Sign in to continue"),
                         fontSize = 20.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = TextPrimaryLight
@@ -243,7 +316,12 @@ fun LoginScreen(
                     Spacer(modifier = Modifier.height(6.dp))
 
                     Text(
-                        text = "Unlock live tracking, saved delivery addresses, member-exclusive coupons, and instant reordering.",
+                        text = if (authType == "Phone")
+                            "Enter your 10-digit mobile number and 6-digit OTP code to verify and sign in instantly."
+                        else (if (isSignUpMode) 
+                            "Sign up with Google or Email to unlock live tracking, exclusive coupons, and fast food delivery." 
+                        else 
+                            "Unlock live tracking, saved delivery addresses, member-exclusive coupons, and instant reordering."),
                         fontSize = 13.sp,
                         color = TextSecondaryLight,
                         textAlign = TextAlign.Center,
@@ -303,84 +381,353 @@ fun LoginScreen(
                         }
                     }
 
-                    // Official Google Sign-In Button
-                    Surface(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp)
-                            .clip(RoundedCornerShape(14.dp))
-                            .border(1.dp, BorderLight, RoundedCornerShape(14.dp))
-                            .clickable(enabled = !authLoading) {
-                                if (activity != null) {
-                                    viewModel.signInWithGoogle(activity, onSuccess = onLoginSuccess)
-                                } else {
-                                    viewModel.setAuthError("Device window not ready for Google authentication. Please try again.")
-                                }
-                            }
-                            .testTag("google_sign_in_button"),
-                        shape = RoundedCornerShape(14.dp),
-                        color = Color.White,
-                        shadowElevation = 2.dp
-                    ) {
-                        Row(
+                    if (authType == "Phone") {
+                        // Phone Number Authentication Flow
+                        OutlinedTextField(
+                            value = phoneInput,
+                            onValueChange = { phoneInput = it },
+                            label = { Text("Mobile Number (+91...)") },
                             modifier = Modifier
-                                .fillMaxSize()
-                                .padding(horizontal = 16.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
+                                .fillMaxWidth()
+                                .testTag("phone_number_input"),
+                            shape = RoundedCornerShape(12.dp),
+                            singleLine = true
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        OutlinedTextField(
+                            value = otpInput,
+                            onValueChange = { otpInput = it },
+                            label = { Text("6-Digit OTP Code (e.g. 123456)") },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("phone_otp_input"),
+                            shape = RoundedCornerShape(12.dp),
+                            singleLine = true,
+                            visualTransformation = PasswordVisualTransformation()
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Button(
+                            onClick = {
+                                if (phoneInput.isBlank() || otpInput.isBlank()) {
+                                    viewModel.setAuthError("Please enter both mobile number and 6-digit OTP code.")
+                                    return@Button
+                                }
+                                viewModel.signInWithPhoneNumber(phoneInput, otpInput, onSuccess = onLoginSuccess)
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(50.dp)
+                                .testTag("phone_auth_submit_button"),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = com.example.ui.theme.Primary
+                            ),
+                            enabled = !authLoading
                         ) {
                             if (authLoading) {
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(22.dp),
-                                    color = com.example.ui.theme.Primary,
+                                    color = Color.White,
                                     strokeWidth = 2.5.dp
                                 )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(
-                                    text = "Signing in with Google...",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = TextPrimaryLight
-                                )
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Text("Verifying OTP...", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White)
                             } else {
-                                Image(
-                                    painter = painterResource(id = R.drawable.ic_google_logo),
-                                    contentDescription = "Google Logo",
-                                    modifier = Modifier.size(22.dp)
-                                )
-                                Spacer(modifier = Modifier.width(14.dp))
-                                Text(
-                                    text = "Sign in with Google",
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = Color(0xFF3C4043)
-                                )
+                                Text("Verify & Sign In", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White)
                             }
                         }
-                    }
+                    } else {
+                        // Google & Email Flow
+                        // Mode Tabs (Sign In vs Sign Up)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color(0xFFF1F3F5), RoundedCornerShape(12.dp))
+                                .padding(4.dp),
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            Surface(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(34.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable { isSignUpMode = false },
+                                color = if (!isSignUpMode) Color.White else Color.Transparent,
+                                shadowElevation = if (!isSignUpMode) 2.dp else 0.dp
+                            ) {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "Sign In",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (!isSignUpMode) com.example.ui.theme.Primary else TextSecondaryLight
+                                    )
+                                }
+                            }
 
-                    Spacer(modifier = Modifier.height(18.dp))
+                            Surface(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(34.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable { isSignUpMode = true },
+                                color = if (isSignUpMode) Color.White else Color.Transparent,
+                                shadowElevation = if (isSignUpMode) 2.dp else 0.dp
+                            ) {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "Sign Up",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (isSignUpMode) com.example.ui.theme.Primary else TextSecondaryLight
+                                    )
+                                }
+                            }
+                        }
 
-                    // Divider with "OR"
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        HorizontalDivider(
-                            modifier = Modifier.weight(1f),
-                            color = BorderLight
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Official Google Sign-In / Sign-Up Button
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(52.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .border(1.dp, BorderLight, RoundedCornerShape(14.dp))
+                                .clickable(enabled = !authLoading) {
+                                    if (activity != null) {
+                                        viewModel.signInWithGoogle(
+                                            activity = activity,
+                                            onSuccess = onLoginSuccess,
+                                            onFailure = { err ->
+                                                viewModel.clearAuthError()
+                                                showCustomGoogleDialog = true
+                                            }
+                                        )
+                                    } else {
+                                        showCustomGoogleDialog = true
+                                    }
+                                }
+                                .testTag("google_sign_in_button"),
+                            shape = RoundedCornerShape(14.dp),
+                            color = Color.White,
+                            shadowElevation = 2.dp
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(horizontal = 16.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                if (authLoading) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(22.dp),
+                                        color = com.example.ui.theme.Primary,
+                                        strokeWidth = 2.5.dp
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text(
+                                        text = "Logging in with Google...",
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = TextPrimaryLight
+                                    )
+                                } else {
+                                    Image(
+                                        painter = painterResource(id = R.drawable.ic_google_logo),
+                                        contentDescription = "Google Logo",
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(14.dp))
+                                    Text(
+                                        text = "Login with Google",
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Color(0xFF3C4043)
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        // Custom Google ID Sign-In option for users signing in with their own ID
+                        TextButton(
+                            onClick = { showCustomGoogleDialog = true },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("custom_google_id_button")
+                        ) {
+                            Text(
+                                text = "Login with your Google ID",
+                                fontSize = 12.sp,
+                                color = com.example.ui.theme.Primary,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        if (showCustomGoogleDialog) {
+                            androidx.compose.material3.AlertDialog(
+                                onDismissRequest = { showCustomGoogleDialog = false },
+                                title = { Text("Login with Google ID") },
+                                text = {
+                                    Column {
+                                        Text("Enter your Google email address and name to login with your Google ID:", fontSize = 13.sp, color = TextSecondaryLight)
+                                        Spacer(modifier = Modifier.height(12.dp))
+                                        OutlinedTextField(
+                                            value = customGoogleName,
+                                            onValueChange = { customGoogleName = it },
+                                            label = { Text("Your Name") },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            singleLine = true,
+                                            shape = RoundedCornerShape(10.dp)
+                                        )
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        OutlinedTextField(
+                                            value = customGoogleEmail,
+                                            onValueChange = { customGoogleEmail = it },
+                                            label = { Text("Google Email (e.g. user@gmail.com)") },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            singleLine = true,
+                                            shape = RoundedCornerShape(10.dp)
+                                        )
+                                    }
+                                },
+                                confirmButton = {
+                                    Button(
+                                        onClick = {
+                                            if (customGoogleEmail.isNotBlank() && customGoogleEmail.contains("@")) {
+                                                viewModel.signInWithDemoGoogleAccount(
+                                                    name = customGoogleName.ifBlank { customGoogleEmail.substringBefore("@") },
+                                                    email = customGoogleEmail.trim(),
+                                                    onSuccess = {
+                                                        showCustomGoogleDialog = false
+                                                        onLoginSuccess()
+                                                    }
+                                                )
+                                            } else {
+                                                viewModel.setAuthError("Please enter a valid Google email.")
+                                            }
+                                        }
+                                    ) {
+                                        Text("Sign In")
+                                    }
+                                },
+                                dismissButton = {
+                                    TextButton(onClick = { showCustomGoogleDialog = false }) {
+                                        Text("Cancel")
+                                    }
+                                }
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Divider with "OR EMAIL"
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            HorizontalDivider(
+                                modifier = Modifier.weight(1f),
+                                color = BorderLight
+                            )
+                            Text(
+                                text = "OR EMAIL",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextMutedLight,
+                                modifier = Modifier.padding(horizontal = 12.dp)
+                            )
+                            HorizontalDivider(
+                                modifier = Modifier.weight(1f),
+                                color = BorderLight
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        if (isSignUpMode) {
+                            OutlinedTextField(
+                                value = nameInput,
+                                onValueChange = { nameInput = it },
+                                label = { Text("Full Name") },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("signup_name_input"),
+                                shape = RoundedCornerShape(12.dp),
+                                singleLine = true
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
+
+                        OutlinedTextField(
+                            value = emailInput,
+                            onValueChange = { emailInput = it },
+                            label = { Text("Email Address") },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("login_email_input"),
+                            shape = RoundedCornerShape(12.dp),
+                            singleLine = true
                         )
-                        Text(
-                            text = "OR",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TextMutedLight,
-                            modifier = Modifier.padding(horizontal = 12.dp)
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        OutlinedTextField(
+                            value = passwordInput,
+                            onValueChange = { passwordInput = it },
+                            label = { Text("Password") },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("login_password_input"),
+                            shape = RoundedCornerShape(12.dp),
+                            singleLine = true,
+                            visualTransformation = PasswordVisualTransformation()
                         )
-                        HorizontalDivider(
-                            modifier = Modifier.weight(1f),
-                            color = BorderLight
-                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Button(
+                            onClick = {
+                                if (emailInput.isBlank() || passwordInput.isBlank()) {
+                                    viewModel.setAuthError("Please fill in all email & password fields.")
+                                    return@Button
+                                }
+                                if (isSignUpMode) {
+                                    viewModel.signUpWithEmail(emailInput.trim(), passwordInput, nameInput.ifBlank { "Foodie" }, onSuccess = onLoginSuccess)
+                                } else {
+                                    viewModel.signInWithEmail(emailInput.trim(), passwordInput, onSuccess = onLoginSuccess)
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(50.dp)
+                                .testTag("email_auth_submit_button"),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = com.example.ui.theme.Primary
+                            ),
+                            enabled = !authLoading
+                        ) {
+                            Text(
+                                text = if (isSignUpMode) "Create Account" else "Sign In with Email",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
