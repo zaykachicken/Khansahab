@@ -65,13 +65,17 @@ class AuthManager(private val context: Context) {
     }
 
     private fun mapFirebaseUser(user: FirebaseUser): UserAccount {
+        val userEmail = user.email ?: ""
+        val normalized = userEmail.trim().lowercase()
+        val isAdminEmail = normalized == "yashrabalam9@gmail.com" || normalized.startsWith("admin@")
         return UserAccount(
             uid = user.uid,
-            displayName = user.displayName ?: user.email?.substringBefore("@") ?: "Foodie",
-            email = user.email ?: "",
+            displayName = user.displayName ?: userEmail.substringBefore("@").ifBlank { "Foodie" },
+            email = userEmail,
             photoUrl = user.photoUrl?.toString(),
             isAnonymous = user.isAnonymous,
-            authProvider = "Google"
+            authProvider = "Google",
+            role = if (isAdminEmail) "RESTAURANT_ADMIN" else "CUSTOMER"
         )
     }
 
@@ -128,13 +132,17 @@ class AuthManager(private val context: Context) {
                 }
 
                 // Fallback to direct Google ID Token user
+                val userEmail = googleIdTokenCredential.id
+                val normalized = userEmail.trim().lowercase()
+                val isAdminEmail = normalized == "yashrabalam9@gmail.com" || normalized.startsWith("admin@")
                 val account = UserAccount(
                     uid = googleIdTokenCredential.id,
                     displayName = googleIdTokenCredential.displayName ?: "Google User",
-                    email = googleIdTokenCredential.id,
+                    email = userEmail,
                     photoUrl = googleIdTokenCredential.profilePictureUri?.toString(),
                     isAnonymous = false,
-                    authProvider = "Google"
+                    authProvider = "Google",
+                    role = if (isAdminEmail) "RESTAURANT_ADMIN" else "CUSTOMER"
                 )
                 _currentUser.value = account
                 return@withContext Result.success(account)
@@ -142,11 +150,11 @@ class AuthManager(private val context: Context) {
                 return@withContext Result.failure(IllegalStateException("Unsupported credential type: ${credential.type}"))
             }
         } catch (e: GetCredentialCancellationException) {
-            return@withContext Result.failure(Exception("Google Sign-In was cancelled by user."))
+            return@withContext Result.failure(Exception("Google Sign-In was cancelled."))
         } catch (e: NoCredentialException) {
-            return@withContext Result.failure(Exception("No Google accounts found on this device. You can use Quick Demo Sign-In."))
+            return@withContext Result.failure(Exception("No Google account selected or found on this device."))
         } catch (e: GetCredentialException) {
-            return@withContext Result.failure(Exception(e.localizedMessage ?: "Google Sign-In failed."))
+            return@withContext Result.failure(Exception(e.localizedMessage ?: "Google Sign-In failed. Please try again."))
         } catch (e: Exception) {
             return@withContext Result.failure(e)
         }
@@ -166,6 +174,10 @@ class AuthManager(private val context: Context) {
         )
         _currentUser.value = account
         return account
+    }
+
+    fun setUserAccount(account: UserAccount) {
+        _currentUser.value = account
     }
 
     fun continueAsGuest(): UserAccount {

@@ -6,9 +6,11 @@ import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.model.CartItem
+import com.example.data.model.DealEntity
 import com.example.data.model.FoodItem
 import com.example.data.model.OrderEntity
 import com.example.data.model.OrderStatus
+import com.example.data.model.RestaurantContactEntity
 import com.example.data.model.SavedAddress
 import com.example.data.model.UserAccount
 import com.example.data.repository.AuthManager
@@ -18,6 +20,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -29,7 +32,35 @@ data class Coupon(
     val discountPercent: Double = 0.0,
     val maxDiscount: Double = 0.0,
     val flatDiscount: Double = 0.0,
-    val isFreeDelivery: Boolean = false
+    val isFreeDelivery: Boolean = false,
+    val isActive: Boolean = true,
+    val badgeTag: String = "POPULAR"
+)
+
+fun DealEntity.toCoupon(): Coupon = Coupon(
+    code = code,
+    title = title,
+    description = description,
+    minOrder = minOrder,
+    discountPercent = discountPercent,
+    maxDiscount = maxDiscount,
+    flatDiscount = flatDiscount,
+    isFreeDelivery = isFreeDelivery,
+    isActive = isActive,
+    badgeTag = badgeTag
+)
+
+fun Coupon.toDealEntity(): DealEntity = DealEntity(
+    code = code,
+    title = title,
+    description = description,
+    minOrder = minOrder,
+    discountPercent = discountPercent,
+    maxDiscount = maxDiscount,
+    flatDiscount = flatDiscount,
+    isFreeDelivery = isFreeDelivery,
+    isActive = isActive,
+    badgeTag = badgeTag
 )
 
 class ZaykaViewModel(application: Application) : AndroidViewModel(application) {
@@ -55,6 +86,36 @@ class ZaykaViewModel(application: Application) : AndroidViewModel(application) {
 
     val activeOrders: StateFlow<List<OrderEntity>> = repository.activeOrders
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // New Incoming Orders (Placed, awaiting kitchen confirmation)
+    val unacceptedOrders: StateFlow<List<OrderEntity>> = repository.allOrders.map { orders ->
+        orders.filter { it.status == OrderStatus.PLACED }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Admin Ringing Alert Preferences & State
+    private val _isAdminSoundAlertEnabled = MutableStateFlow(true)
+    val isAdminSoundAlertEnabled: StateFlow<Boolean> = _isAdminSoundAlertEnabled.asStateFlow()
+
+    private val _isAlarmMutedForCurrentBatch = MutableStateFlow(false)
+    val isAlarmMutedForCurrentBatch: StateFlow<Boolean> = _isAlarmMutedForCurrentBatch.asStateFlow()
+
+    fun toggleAdminSoundAlert() {
+        _isAdminSoundAlertEnabled.value = !_isAdminSoundAlertEnabled.value
+    }
+
+    fun muteCurrentOrderAlert() {
+        _isAlarmMutedForCurrentBatch.value = true
+    }
+
+    fun unmuteCurrentOrderAlert() {
+        _isAlarmMutedForCurrentBatch.value = false
+    }
+
+    fun acceptOrder(orderId: Long) {
+        viewModelScope.launch {
+            repository.updateOrderStatus(orderId, OrderStatus.CONFIRMED)
+        }
+    }
 
     val savedAddresses: StateFlow<List<SavedAddress>> = repository.allAddresses
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -111,31 +172,55 @@ class ZaykaViewModel(application: Application) : AndroidViewModel(application) {
     private val _isStoreOpen = MutableStateFlow(true)
     val isStoreOpen: StateFlow<Boolean> = _isStoreOpen.asStateFlow()
 
-    // Available coupons
-    val availableCoupons = listOf(
-        Coupon(
-            code = "ZAYKA50",
-            title = "50% OFF up to ₹120",
-            description = "Valid on orders above ₹249",
-            minOrder = 249.0,
-            discountPercent = 50.0,
-            maxDiscount = 120.0
-        ),
-        Coupon(
-            code = "FEAST100",
-            title = "FLAT ₹100 OFF",
-            description = "Valid on big family orders above ₹499",
-            minOrder = 499.0,
-            flatDiscount = 100.0
-        ),
-        Coupon(
-            code = "FREEDEL",
-            title = "FREE DELIVERY",
-            description = "Enjoy zero delivery fee on orders above ₹199",
-            minOrder = 199.0,
-            isFreeDelivery = true
-        )
-    )
+    // Theme Mode: null = system default, true = dark mode, false = light mode
+    private val _isDarkTheme = MutableStateFlow<Boolean?>(null)
+    val isDarkTheme: StateFlow<Boolean?> = _isDarkTheme.asStateFlow()
+
+    fun setThemeMode(isDark: Boolean?) {
+        _isDarkTheme.value = isDark
+    }
+
+    // Deals and Coupons flows
+    val allDeals: StateFlow<List<Coupon>> = repository.allDeals
+        .map { list -> list.map { it.toCoupon() } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val activeDeals: StateFlow<List<Coupon>> = repository.activeDeals
+        .map { list -> list.map { it.toCoupon() } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Restaurant Help & Contact Information flow
+    val restaurantContactInfo: StateFlow<RestaurantContactEntity> = repository.contactInfo
+        .map { it ?: RestaurantContactEntity() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), RestaurantContactEntity())
+
+    fun updateRestaurantContactInfo(info: RestaurantContactEntity) {
+        viewModelScope.launch {
+            repository.updateContactInfo(info)
+        }
+    }
+
+    // Admin Deals & Discounts Management
+    fun saveDeal(coupon: Coupon) {
+        viewModelScope.launch {
+            repository.saveDeal(coupon.toDealEntity())
+        }
+    }
+
+    fun toggleDealStatus(code: String, currentStatus: Boolean) {
+        viewModelScope.launch {
+            repository.updateDealStatus(code, !currentStatus)
+        }
+    }
+
+    fun deleteDeal(code: String) {
+        viewModelScope.launch {
+            repository.deleteDeal(code)
+            if (_appliedCoupon.value?.code == code) {
+                _appliedCoupon.value = null
+            }
+        }
+    }
 
     fun selectCategory(category: String) {
         _selectedCategory.value = category
@@ -226,14 +311,15 @@ class ZaykaViewModel(application: Application) : AndroidViewModel(application) {
         val coupon = _appliedCoupon.value
         if (coupon != null && coupon.isFreeDelivery) return 0.0
         val subtotal = calculateSubtotal(items)
-        return if (subtotal >= 499.0) 0.0 else 35.0
+        if (subtotal >= 100.0) return 0.0
+        return restaurantContactInfo.value.deliveryFeeAmount
     }
 
     fun calculatePackagingFee(delType: String): Double {
-        return if (delType == "TAKEAWAY") 10.0 else 15.0
+        return 0.0
     }
 
-    fun calculateTax(subtotal: Double): Double = subtotal * 0.05 // 5% GST
+    fun calculateTax(subtotal: Double): Double = 0.0
 
     fun calculateDiscount(subtotal: Double): Double {
         val coupon = _appliedCoupon.value ?: return 0.0
@@ -256,8 +342,15 @@ class ZaykaViewModel(application: Application) : AndroidViewModel(application) {
         return (subtotal + deliveryFee + packaging + tax - discount).coerceAtLeast(0.0)
     }
 
-    fun placeOrder(onSuccess: (Long) -> Unit) {
+    fun placeOrder(onSuccess: (Long) -> Unit, onError: ((String) -> Unit)? = null) {
         viewModelScope.launch {
+            val user = currentUser.value
+            if (user == null || user.isAnonymous || user.email.isBlank()) {
+                val errorMsg = "Please sign in with Google to place your order."
+                setAuthError(errorMsg)
+                onError?.invoke(errorMsg)
+                return@launch
+            }
             val items = cartItems.value
             if (items.isEmpty()) return@launch
 
@@ -287,6 +380,7 @@ class ZaykaViewModel(application: Application) : AndroidViewModel(application) {
 
             _appliedCoupon.value = null
             _activeTrackingOrderId.value = newOrderId
+            _isAlarmMutedForCurrentBatch.value = false
             onSuccess(newOrderId)
         }
     }
@@ -369,6 +463,181 @@ class ZaykaViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    // Email & Password Authentication using local Room Database
+    fun signInWithEmailPassword(
+        email: String,
+        pass: String,
+        onSuccess: () -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            _authLoading.value = true
+            _authError.value = null
+
+            val trimmedEmail = email.trim()
+            val trimmedPass = pass.trim()
+
+            if (trimmedEmail.isBlank() || trimmedPass.isBlank()) {
+                _authLoading.value = false
+                _authError.value = "Please enter both email and password."
+                return@launch
+            }
+
+            val user = repository.getUserByEmail(trimmedEmail)
+            _authLoading.value = false
+
+            if (user != null && user.passwordHash == trimmedPass) {
+                authManager.setUserAccount(
+                    UserAccount(
+                        uid = "db_${user.email}",
+                        displayName = user.displayName,
+                        email = user.email,
+                        photoUrl = null,
+                        isAnonymous = false,
+                        authProvider = "Email",
+                        role = user.role
+                    )
+                )
+                _authError.value = null
+                onSuccess()
+            } else if (user != null) {
+                _authError.value = "Incorrect password. Please try again."
+            } else {
+                _authError.value = "No account found with this email. You can sign up below."
+            }
+        }
+    }
+
+    fun signUpWithEmailPassword(
+        name: String,
+        email: String,
+        pass: String,
+        phone: String = "",
+        role: String = "CUSTOMER",
+        onSuccess: () -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            _authLoading.value = true
+            _authError.value = null
+
+            val trimmedEmail = email.trim()
+            val trimmedPass = pass.trim()
+            val trimmedName = name.trim().ifBlank { trimmedEmail.substringBefore("@") }
+
+            if (trimmedEmail.isBlank() || !trimmedEmail.contains("@")) {
+                _authLoading.value = false
+                _authError.value = "Please enter a valid email address."
+                return@launch
+            }
+            if (trimmedPass.length < 4) {
+                _authLoading.value = false
+                _authError.value = "Password must be at least 4 characters long."
+                return@launch
+            }
+
+            val existing = repository.getUserByEmail(trimmedEmail)
+            if (existing != null) {
+                _authLoading.value = false
+                _authError.value = "An account with this email already exists. Please log in."
+                return@launch
+            }
+
+            val newUser = com.example.data.model.UserEntity(
+                email = trimmedEmail,
+                displayName = trimmedName,
+                passwordHash = trimmedPass,
+                phone = phone.trim(),
+                role = role
+            )
+            repository.registerUser(newUser)
+            _authLoading.value = false
+
+            authManager.setUserAccount(
+                UserAccount(
+                    uid = "db_${newUser.email}",
+                    displayName = newUser.displayName,
+                    email = newUser.email,
+                    photoUrl = null,
+                    isAnonymous = false,
+                    authProvider = "Email",
+                    role = newUser.role
+                )
+            )
+            _authError.value = null
+            onSuccess()
+        }
+    }
+
+    // Direct Restaurant Email Authentication: Restaurant has dedicated access
+    fun signInAsRestaurant(
+        email: String,
+        pass: String,
+        onSuccess: () -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            _authLoading.value = true
+            _authError.value = null
+
+            val trimmedEmail = email.trim()
+            val trimmedPass = pass.trim()
+
+            if (trimmedEmail.isBlank() || trimmedPass.isBlank()) {
+                _authLoading.value = false
+                _authError.value = "Please enter restaurant staff email and password."
+                return@launch
+            }
+
+            val user = repository.getUserByEmail(trimmedEmail)
+            _authLoading.value = false
+
+            if (user != null && user.passwordHash == trimmedPass && user.role == "RESTAURANT_ADMIN") {
+                authManager.setUserAccount(
+                    UserAccount(
+                        uid = "restaurant_${user.email}",
+                        displayName = user.displayName,
+                        email = user.email,
+                        photoUrl = null,
+                        isAnonymous = false,
+                        authProvider = "RestaurantEmail",
+                        role = "RESTAURANT_ADMIN"
+                    )
+                )
+                _authError.value = null
+                onSuccess()
+            } else if (user != null && user.role != "RESTAURANT_ADMIN") {
+                _authError.value = "This email is registered as a customer, not restaurant staff."
+            } else if (user != null) {
+                _authError.value = "Invalid restaurant credentials. Please verify your password."
+            } else {
+                // If it's the official restaurant default credentials, allow creation or access
+                if (trimmedEmail.equals("restaurant@zayka.com", ignoreCase = true) && trimmedPass == "admin123") {
+                    val restaurantUser = com.example.data.model.UserEntity(
+                        email = "restaurant@zayka.com",
+                        displayName = "Zayka Restaurant Admin",
+                        passwordHash = "admin123",
+                        phone = "+91 98765 12345",
+                        role = "RESTAURANT_ADMIN"
+                    )
+                    repository.registerUser(restaurantUser)
+                    authManager.setUserAccount(
+                        UserAccount(
+                            uid = "restaurant_admin",
+                            displayName = "Zayka Restaurant Admin",
+                            email = "restaurant@zayka.com",
+                            photoUrl = null,
+                            isAnonymous = false,
+                            authProvider = "RestaurantEmail",
+                            role = "RESTAURANT_ADMIN"
+                        )
+                    )
+                    _authError.value = null
+                    onSuccess()
+                } else {
+                    _authError.value = "No restaurant account found with this email."
+                }
+            }
+        }
+    }
+
     // Authentication functions
     fun signInWithGoogle(activity: Activity, onSuccess: () -> Unit = {}) {
         viewModelScope.launch {
@@ -380,31 +649,24 @@ class ZaykaViewModel(application: Application) : AndroidViewModel(application) {
                 _authError.value = null
                 onSuccess()
             }.onFailure { ex ->
-                val msg = ex.message ?: ""
-                // If device lacks Google Play Services / credentials or cancelled, seamlessly fall back to the demo account so user is never blocked
-                if (msg.contains("No Google accounts") || msg.contains("failed") || msg.contains("Unsupported") || msg.contains("16")) {
-                    authManager.signInWithDemoGoogleAccount(
-                        name = "Yash Rabalam",
-                        email = "yashrabalam9@gmail.com"
-                    )
-                    _authError.value = null
-                    onSuccess()
-                } else {
-                    _authError.value = msg.ifBlank { "Sign-in could not be completed. Switched to demo account." }
-                }
+                val msg = ex.message ?: "Google Sign-In failed. Please check your network and Google Play Services."
+                _authError.value = msg
             }
         }
     }
 
-    fun signInWithDemoGoogle(onSuccess: () -> Unit = {}) {
-        _authLoading.value = true
+    fun signInWithDemoGoogleAccount(
+        name: String = "Yash Rabalam",
+        email: String = "yashrabalam9@gmail.com",
+        onSuccess: () -> Unit = {}
+    ) {
+        authManager.signInWithDemoGoogleAccount(name, email)
         _authError.value = null
-        authManager.signInWithDemoGoogleAccount(
-            name = "Yash Rabalam",
-            email = "yashrabalam9@gmail.com"
-        )
-        _authLoading.value = false
         onSuccess()
+    }
+
+    fun setAuthError(error: String) {
+        _authError.value = error
     }
 
     fun continueAsGuest(onSuccess: () -> Unit = {}) {

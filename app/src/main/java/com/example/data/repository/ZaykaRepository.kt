@@ -22,11 +22,48 @@ class ZaykaRepository(context: Context) {
     private val cartDao = database.cartDao()
     private val orderDao = database.orderDao()
     private val addressDao = database.addressDao()
+    private val userDao = database.userDao()
+    private val dealDao = database.dealDao()
+    private val contactDao = database.contactDao()
 
     init {
         CoroutineScope(Dispatchers.IO).launch {
             seedInitialDataIfEmpty()
         }
+    }
+
+    // Restaurant Help & Contact info queries and updates
+    val contactInfo: Flow<com.example.data.model.RestaurantContactEntity?> = contactDao.getContactInfo()
+
+    suspend fun updateContactInfo(info: com.example.data.model.RestaurantContactEntity) {
+        contactDao.insertOrUpdateContactInfo(info)
+    }
+
+    // Deals & Discounts queries and updates
+    val allDeals: Flow<List<com.example.data.model.DealEntity>> = dealDao.getAllDeals()
+    val activeDeals: Flow<List<com.example.data.model.DealEntity>> = dealDao.getActiveDeals()
+
+    suspend fun saveDeal(deal: com.example.data.model.DealEntity) {
+        dealDao.insertDeal(deal)
+    }
+
+    suspend fun updateDealStatus(code: String, isActive: Boolean) {
+        dealDao.updateDealStatus(code, isActive)
+    }
+
+    suspend fun deleteDeal(code: String) {
+        dealDao.deleteDeal(code)
+    }
+
+    // User authentication database operations
+    suspend fun getUserByEmail(email: String) = userDao.getUserByEmail(email)
+
+    suspend fun registerUser(user: com.example.data.model.UserEntity) {
+        userDao.insertUser(user)
+    }
+
+    suspend fun updateUser(user: com.example.data.model.UserEntity) {
+        userDao.updateUser(user)
     }
 
     // Menu queries
@@ -414,6 +451,106 @@ class ZaykaRepository(context: Context) {
                     landmark = "Near Rapid Metro Station",
                     contactPhone = "+91 98765 43210",
                     isDefault = false
+                )
+            )
+        }
+
+        if (userDao.getUserCount() == 0) {
+            // Seed default restaurant admin and default customer account in Room DB
+            userDao.insertUser(
+                com.example.data.model.UserEntity(
+                    email = "restaurant@zayka.com",
+                    displayName = "Zayka Restaurant Admin",
+                    passwordHash = "admin123",
+                    phone = "+91 98765 12345",
+                    role = "RESTAURANT_ADMIN"
+                )
+            )
+            userDao.insertUser(
+                com.example.data.model.UserEntity(
+                    email = "yashrabalam9@gmail.com",
+                    displayName = "Yash Rabalam",
+                    passwordHash = "yash123",
+                    phone = "+91 98765 43210",
+                    role = "CUSTOMER"
+                )
+            )
+        }
+
+        // Seed default Deals and Discounts in Room DB
+        dealDao.insertAllDeals(
+            listOf(
+                com.example.data.model.DealEntity(
+                    code = "ZAYKA50",
+                    title = "50% OFF up to ₹120",
+                    description = "Valid on authentic Biryani & Starters above ₹249",
+                    minOrder = 249.0,
+                    discountPercent = 50.0,
+                    maxDiscount = 120.0,
+                    flatDiscount = 0.0,
+                    isFreeDelivery = false,
+                    isActive = true,
+                    badgeTag = "POPULAR"
+                ),
+                com.example.data.model.DealEntity(
+                    code = "FEAST100",
+                    title = "FLAT ₹100 OFF",
+                    description = "Valid on family feast orders above ₹499",
+                    minOrder = 499.0,
+                    discountPercent = 0.0,
+                    maxDiscount = 0.0,
+                    flatDiscount = 100.0,
+                    isFreeDelivery = false,
+                    isActive = true,
+                    badgeTag = "HOT DEAL"
+                ),
+                com.example.data.model.DealEntity(
+                    code = "FREEDEL",
+                    title = "FREE DELIVERY",
+                    description = "Zero delivery charges on all meals above ₹199",
+                    minOrder = 199.0,
+                    discountPercent = 0.0,
+                    maxDiscount = 0.0,
+                    flatDiscount = 0.0,
+                    isFreeDelivery = true,
+                    isActive = true,
+                    badgeTag = "SUPER SAVER"
+                ),
+                com.example.data.model.DealEntity(
+                    code = "MUGHLAI75",
+                    title = "₹75 OFF on Mughlai",
+                    description = "Special dinner discount on Kebabs & Curries above ₹399",
+                    minOrder = 399.0,
+                    discountPercent = 0.0,
+                    maxDiscount = 0.0,
+                    flatDiscount = 75.0,
+                    isFreeDelivery = false,
+                    isActive = true,
+                    badgeTag = "LIMITED TIME"
+                )
+            )
+        )
+
+        // Seed default Restaurant Contact & Help Desk Info
+        if (contactDao.getContactInfoDirect() == null) {
+            contactDao.insertOrUpdateContactInfo(
+                com.example.data.model.RestaurantContactEntity(
+                    id = 1,
+                    restaurantName = "Zayka Chicken Cafe",
+                    supportPhone = "+91 98765 12345",
+                    whatsappNumber = "+91 98765 12345",
+                    supportEmail = "help@zaykacafe.com",
+                    operatingHours = "10:00 AM - 11:30 PM (Mon-Sun)",
+                    address = "Near Metro Gate 2, Sector 18, Noida, UP - 201301",
+                    fssaiNumber = "12722055000492",
+                    emergencyManagerContact = "+91 98111 22334",
+                    helpDeskDescription = "We are committed to serving authentic chicken delicacies and ensuring prompt doorstep delivery. Reach us anytime for order inquiries, special bulk catering, or delivery status.",
+                    faq1Question = "How can I track my live order?",
+                    faq1Answer = "Go to the Orders tab and tap 'Track Live Order' to see real-time updates directly from our kitchen.",
+                    faq2Question = "What is the average delivery time?",
+                    faq2Answer = "Most orders are delivered within 30-40 minutes from our Sector 18 kitchen.",
+                    faq3Question = "How do I cancel or modify my order?",
+                    faq3Answer = "Call our direct restaurant helpline or message us on WhatsApp immediately before kitchen preparation begins."
                 )
             )
         }

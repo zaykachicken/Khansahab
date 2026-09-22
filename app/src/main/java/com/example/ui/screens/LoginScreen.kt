@@ -314,8 +314,7 @@ fun LoginScreen(
                                 if (activity != null) {
                                     viewModel.signInWithGoogle(activity, onSuccess = onLoginSuccess)
                                 } else {
-                                    // Fallback if activity is not attached
-                                    viewModel.signInWithDemoGoogle(onSuccess = onLoginSuccess)
+                                    viewModel.setAuthError("Device window not ready for Google authentication. Please try again.")
                                 }
                             }
                             .testTag("google_sign_in_button"),
@@ -338,7 +337,7 @@ fun LoginScreen(
                                 )
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Text(
-                                    text = "Connecting to Google...",
+                                    text = "Signing in with Google...",
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     color = TextPrimaryLight
@@ -357,38 +356,6 @@ fun LoginScreen(
                                     color = Color(0xFF3C4043)
                                 )
                             }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    // Demo / Quick Sign-In Option (matching Primary #EA580C button)
-                    Surface(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp)
-                            .clip(RoundedCornerShape(14.dp))
-                            .clickable(enabled = !authLoading) {
-                                viewModel.signInWithDemoGoogle(onSuccess = onLoginSuccess)
-                            }
-                            .testTag("demo_google_sign_in_button"),
-                        shape = RoundedCornerShape(14.dp),
-                        color = com.example.ui.theme.PrimaryLight,
-                        border = androidx.compose.foundation.BorderStroke(1.dp, com.example.ui.theme.Primary.copy(alpha = 0.5f))
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(horizontal = 16.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            Text(
-                                text = "⚡ Fast Demo Sign-In (Yash Rabalam)",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = com.example.ui.theme.PrimaryDark
-                            )
                         }
                     }
 

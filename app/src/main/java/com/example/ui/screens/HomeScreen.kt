@@ -105,6 +105,8 @@ fun HomeScreen(
     val selectedAddress by viewModel.selectedAddress.collectAsState()
     val isStoreOpen by viewModel.isStoreOpen.collectAsState()
     val currentUser by viewModel.currentUser.collectAsState()
+    val activeDeals by viewModel.activeDeals.collectAsState()
+    val contactInfo by viewModel.restaurantContactInfo.collectAsState()
 
     var customisingItem by remember { mutableStateOf<FoodItem?>(null) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -381,7 +383,7 @@ fun HomeScreen(
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    text = "25-30 mins • 2.4 km",
+                                    text = "${contactInfo.preparationTimeMinutes} mins • 2.4 km",
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     color = TextSecondaryLight
@@ -399,38 +401,40 @@ fun HomeScreen(
             }
 
             // Offers Carousel
-            item {
-                Column(modifier = Modifier.padding(vertical = 6.dp)) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Discount,
-                            contentDescription = null,
-                            tint = ZaykaOrange,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "DEALS & DISCOUNTS",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = TextPrimaryLight,
-                            letterSpacing = 0.5.sp
-                        )
-                    }
+            if (activeDeals.isNotEmpty()) {
+                item {
+                    Column(modifier = Modifier.padding(vertical = 6.dp)) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Discount,
+                                contentDescription = null,
+                                tint = ZaykaOrange,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "DEALS & DISCOUNTS",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = TextPrimaryLight,
+                                letterSpacing = 0.5.sp
+                            )
+                        }
 
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        items(viewModel.availableCoupons) { coupon ->
-                            OfferCard(coupon = coupon, onApply = {
-                                viewModel.applyCoupon(coupon)
-                            })
+                        LazyRow(
+                            contentPadding = PaddingValues(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            items(activeDeals, key = { it.code }) { coupon ->
+                                OfferCard(coupon = coupon, onApply = {
+                                    viewModel.applyCoupon(coupon)
+                                })
+                            }
                         }
                     }
                 }
@@ -547,7 +551,7 @@ fun OfferCard(
 ) {
     Card(
         modifier = modifier
-            .width(220.dp)
+            .width(230.dp)
             .clickable { onApply() }
             .testTag("coupon_card_${coupon.code}"),
         shape = RoundedCornerShape(14.dp),
@@ -555,7 +559,11 @@ fun OfferCard(
         border = CardDefaults.outlinedCardBorder().copy(brush = Brush.horizontalGradient(listOf(com.example.ui.theme.PrimaryLight, com.example.ui.theme.Primary)))
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
                 Surface(
                     shape = RoundedCornerShape(4.dp),
                     color = ZaykaOrange
@@ -568,15 +576,31 @@ fun OfferCard(
                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                     )
                 }
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = coupon.title,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 12.sp,
-                    color = TextPrimaryLight
-                )
+                if (coupon.badgeTag.isNotBlank()) {
+                    Surface(
+                        shape = RoundedCornerShape(4.dp),
+                        color = ZaykaRed.copy(alpha = 0.15f)
+                    ) {
+                        Text(
+                            text = coupon.badgeTag,
+                            color = ZaykaRed,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                        )
+                    }
+                }
             }
             Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = coupon.title,
+                fontWeight = FontWeight.Bold,
+                fontSize = 12.sp,
+                color = TextPrimaryLight,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(3.dp))
             Text(
                 text = coupon.description,
                 fontSize = 11.sp,

@@ -51,6 +51,7 @@ import com.example.ui.screens.LoginScreen
 import com.example.ui.screens.OrderHistoryScreen
 import com.example.ui.screens.OrderTrackingScreen
 import com.example.ui.screens.ProfileScreen
+import com.example.ui.screens.RestaurantLoginScreen
 import com.example.ui.theme.TextPrimaryLight
 import com.example.ui.theme.TextSecondaryLight
 import com.example.ui.theme.ZaykaRed
@@ -63,6 +64,7 @@ sealed class AppDestination(val route: String, val label: String) {
     object Cart : AppDestination("cart", "Cart")
     object Tracking : AppDestination("tracking", "Tracking")
     object Login : AppDestination("login", "Login")
+    object RestaurantLogin : AppDestination("restaurant_login", "Restaurant Portal")
 }
 
 @Composable
@@ -82,10 +84,12 @@ fun ZaykaMainScreen(
 
     val totalCartItems = cartItems.sumOf { it.quantity }
     val totalCartPrice = cartItems.sumOf { it.totalCost }
+    val isUserAdmin = currentUser?.isAdmin == true
 
     val showBottomBar = currentDestination != AppDestination.Cart &&
             currentDestination != AppDestination.Tracking &&
-            currentDestination != AppDestination.Login
+            currentDestination != AppDestination.Login &&
+            currentDestination != AppDestination.RestaurantLogin
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -159,26 +163,28 @@ fun ZaykaMainScreen(
                             modifier = Modifier.testTag("nav_item_orders")
                         )
 
-                        // Restaurant Admin
-                        NavigationBarItem(
-                            selected = currentDestination == AppDestination.Admin,
-                            onClick = { currentDestination = AppDestination.Admin },
-                            icon = {
-                                Icon(
-                                    imageVector = if (currentDestination == AppDestination.Admin) Icons.Filled.AdminPanelSettings else Icons.Outlined.AdminPanelSettings,
-                                    contentDescription = "Admin"
-                                )
-                            },
-                            label = { Text("Admin", fontSize = 11.sp, fontWeight = FontWeight.SemiBold) },
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = Color.White,
-                                selectedTextColor = com.example.ui.theme.Primary,
-                                indicatorColor = com.example.ui.theme.Primary,
-                                unselectedIconColor = com.example.ui.theme.TextSecondaryLight,
-                                unselectedTextColor = com.example.ui.theme.TextSecondaryLight
-                            ),
-                            modifier = Modifier.testTag("nav_item_admin")
-                        )
+                        // Restaurant Admin (ONLY visible to Admin Google Account)
+                        if (isUserAdmin) {
+                            NavigationBarItem(
+                                selected = currentDestination == AppDestination.Admin,
+                                onClick = { currentDestination = AppDestination.Admin },
+                                icon = {
+                                    Icon(
+                                        imageVector = if (currentDestination == AppDestination.Admin) Icons.Filled.AdminPanelSettings else Icons.Outlined.AdminPanelSettings,
+                                        contentDescription = "Admin"
+                                    )
+                                },
+                                label = { Text("Admin", fontSize = 11.sp, fontWeight = FontWeight.SemiBold) },
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = Color.White,
+                                    selectedTextColor = com.example.ui.theme.Primary,
+                                    indicatorColor = com.example.ui.theme.Primary,
+                                    unselectedIconColor = com.example.ui.theme.TextSecondaryLight,
+                                    unselectedTextColor = com.example.ui.theme.TextSecondaryLight
+                                ),
+                                modifier = Modifier.testTag("nav_item_admin")
+                            )
+                        }
 
                         // Profile
                         NavigationBarItem(
@@ -232,13 +238,43 @@ fun ZaykaMainScreen(
                     )
                 }
                 AppDestination.Admin -> {
-                    AdminScreen(viewModel = viewModel)
+                    if (isUserAdmin) {
+                        AdminScreen(
+                            viewModel = viewModel,
+                            onLogout = { currentDestination = AppDestination.Home }
+                        )
+                    } else {
+                        HomeScreen(
+                            viewModel = viewModel,
+                            onNavigateToCart = { currentDestination = AppDestination.Cart },
+                            onNavigateToProfile = { currentDestination = AppDestination.Profile }
+                        )
+                    }
+                }
+                AppDestination.RestaurantLogin -> {
+                    if (isUserAdmin) {
+                        AdminScreen(
+                            viewModel = viewModel,
+                            onLogout = { currentDestination = AppDestination.Home }
+                        )
+                    } else {
+                        HomeScreen(
+                            viewModel = viewModel,
+                            onNavigateToCart = { currentDestination = AppDestination.Cart },
+                            onNavigateToProfile = { currentDestination = AppDestination.Profile }
+                        )
+                    }
                 }
                 AppDestination.Profile -> {
                     ProfileScreen(
                         viewModel = viewModel,
-                        onNavigateToAdmin = { currentDestination = AppDestination.Admin },
-                        onNavigateToLogin = { currentDestination = AppDestination.Login }
+                        onNavigateToAdmin = {
+                            if (isUserAdmin) {
+                                currentDestination = AppDestination.Admin
+                            }
+                        },
+                        onNavigateToLogin = { currentDestination = AppDestination.Login },
+                        onNavigateToOrders = { currentDestination = AppDestination.Orders }
                     )
                 }
                 AppDestination.Login -> {

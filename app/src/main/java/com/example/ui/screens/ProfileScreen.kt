@@ -1,5 +1,7 @@
 package com.example.ui.screens
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -27,9 +29,21 @@ import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.ReceiptLong
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.QuestionAnswer
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.SettingsBrightness
+import androidx.compose.material.icons.filled.SupportAgent
+import androidx.compose.material.icons.filled.VerifiedUser
+import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Restaurant
@@ -84,6 +98,7 @@ fun ProfileScreen(
     viewModel: ZaykaViewModel,
     onNavigateToAdmin: () -> Unit,
     onNavigateToLogin: () -> Unit = {},
+    onNavigateToOrders: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -91,8 +106,12 @@ fun ProfileScreen(
     val savedAddresses by viewModel.savedAddresses.collectAsState()
     val allFoodItems by viewModel.allFoodItems.collectAsState()
     val allOrders by viewModel.allOrders.collectAsState()
+    val contactInfo by viewModel.restaurantContactInfo.collectAsState()
     var showAddAddressDialog by remember { mutableStateOf(false) }
     var showSignOutDialog by remember { mutableStateOf(false) }
+    var expandedFaq1 by remember { mutableStateOf(false) }
+    var expandedFaq2 by remember { mutableStateOf(false) }
+    var expandedFaq3 by remember { mutableStateOf(false) }
 
     var newLabel by remember { mutableStateOf("Home") }
     var newAddress by remember { mutableStateOf("") }
@@ -206,7 +225,12 @@ fun ProfileScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Signed in with Google",
+                                text = if (currentUser != null && !currentUser!!.isAnonymous) {
+                                    val roleText = if (currentUser?.role == "RESTAURANT_ADMIN") " • Restaurant Admin" else " • Customer"
+                                    "Signed in via ${currentUser?.authProvider}$roleText"
+                                } else {
+                                    "Signed in as Guest Foodie"
+                                },
                                 fontSize = 12.sp,
                                 color = TextMutedLight
                             )
@@ -234,15 +258,237 @@ fun ProfileScreen(
             }
         }
 
-        // Quick Switch to Staff / Admin Mode
+        // Theme Options (Light Mode / Dark Mode / System)
+        item {
+            val isDarkThemeSetting by viewModel.isDarkTheme.collectAsState()
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("theme_settings_card"),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(com.example.ui.theme.PrimaryLight),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = if (isDarkThemeSetting == true) Icons.Default.DarkMode else Icons.Default.LightMode,
+                                contentDescription = "Theme Icon",
+                                tint = com.example.ui.theme.Primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                text = "App Theme & Appearance",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp,
+                                color = TextPrimaryLight
+                            )
+                            Text(
+                                text = when (isDarkThemeSetting) {
+                                    true -> "Dark Mode Active"
+                                    false -> "Light Mode Active"
+                                    null -> "System Default (Auto)"
+                                },
+                                fontSize = 12.sp,
+                                color = TextSecondaryLight
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Light Mode Button
+                        Surface(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable { viewModel.setThemeMode(false) }
+                                .testTag("theme_light_button"),
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (isDarkThemeSetting == false) com.example.ui.theme.Primary else Color(0xFFF4F4F5),
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.dp,
+                                if (isDarkThemeSetting == false) com.example.ui.theme.Primary else Color(0xFFE4E4E7)
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(vertical = 10.dp),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.LightMode,
+                                    contentDescription = null,
+                                    tint = if (isDarkThemeSetting == false) Color.White else TextPrimaryLight,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "Light",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isDarkThemeSetting == false) Color.White else TextPrimaryLight
+                                )
+                            }
+                        }
+
+                        // Dark Mode Button
+                        Surface(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable { viewModel.setThemeMode(true) }
+                                .testTag("theme_dark_button"),
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (isDarkThemeSetting == true) com.example.ui.theme.Primary else Color(0xFFF4F4F5),
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.dp,
+                                if (isDarkThemeSetting == true) com.example.ui.theme.Primary else Color(0xFFE4E4E7)
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(vertical = 10.dp),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.DarkMode,
+                                    contentDescription = null,
+                                    tint = if (isDarkThemeSetting == true) Color.White else TextPrimaryLight,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "Dark",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isDarkThemeSetting == true) Color.White else TextPrimaryLight
+                                )
+                            }
+                        }
+
+                        // Auto / System Button
+                        Surface(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable { viewModel.setThemeMode(null) }
+                                .testTag("theme_auto_button"),
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (isDarkThemeSetting == null) com.example.ui.theme.Primary else Color(0xFFF4F4F5),
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.dp,
+                                if (isDarkThemeSetting == null) com.example.ui.theme.Primary else Color(0xFFE4E4E7)
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(vertical = 10.dp),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.SettingsBrightness,
+                                    contentDescription = null,
+                                    tint = if (isDarkThemeSetting == null) Color.White else TextPrimaryLight,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "System",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isDarkThemeSetting == null) Color.White else TextPrimaryLight
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Quick Switch to Staff / Admin Mode (ONLY visible to Admin)
+        if (currentUser?.isAdmin == true) {
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onNavigateToAdmin() }
+                        .testTag("staff_admin_card"),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF212121))
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFF333333)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.AdminPanelSettings,
+                                    contentDescription = "Admin",
+                                    tint = ZaykaAmber,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = "Restaurant Staff & Admin Mode",
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp
+                                )
+                                Text(
+                                    text = "Manage live kitchen orders & menu stock",
+                                    color = Color(0xFFAAAAAA),
+                                    fontSize = 11.sp
+                                )
+                            }
+                        }
+
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = "Open Admin",
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+        // Your Orders Shortcut
         item {
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onNavigateToAdmin() }
-                    .testTag("staff_admin_card"),
+                    .clickable { onNavigateToOrders() }
+                    .testTag("profile_view_orders_card"),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF212121))
+                colors = CardDefaults.cardColors(containerColor = Color.White)
             ) {
                 Row(
                     modifier = Modifier
@@ -256,27 +502,27 @@ fun ProfileScreen(
                             modifier = Modifier
                                 .size(40.dp)
                                 .clip(CircleShape)
-                                .background(Color(0xFF333333)),
+                                .background(Color(0xFFFFEBEE)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = Icons.Default.AdminPanelSettings,
-                                contentDescription = "Admin",
-                                tint = ZaykaAmber,
-                                modifier = Modifier.size(24.dp)
+                                imageVector = Icons.Default.ReceiptLong,
+                                contentDescription = "My Orders",
+                                tint = ZaykaRed,
+                                modifier = Modifier.size(22.dp)
                             )
                         }
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text(
-                                text = "Restaurant Staff & Admin Mode",
-                                color = Color.White,
+                                text = "Your Orders & History",
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp
+                                fontSize = 14.sp,
+                                color = TextPrimaryLight
                             )
                             Text(
-                                text = "Manage live kitchen orders & menu stock",
-                                color = Color(0xFFAAAAAA),
+                                text = "${allOrders.size} total orders • Track live status & reorder",
+                                color = TextSecondaryLight,
                                 fontSize = 11.sp
                             )
                         }
@@ -284,9 +530,9 @@ fun ProfileScreen(
 
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = "Open Admin",
-                        tint = Color.White,
-                        modifier = Modifier.size(20.dp)
+                        contentDescription = "View Orders",
+                        tint = TextSecondaryLight,
+                        modifier = Modifier.size(18.dp)
                     )
                 }
             }
@@ -500,39 +746,295 @@ fun ProfileScreen(
             }
         }
 
-        // Restaurant Info & Help
+        // Restaurant Info & Help (Admin-Managed)
         item {
             Card(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("restaurant_help_contact_card"),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White)
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = "Restaurant Contact & Help",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp,
-                        color = TextPrimaryLight
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = contactInfo.restaurantName.ifBlank { "Restaurant Help & Contact" },
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp,
+                            color = TextPrimaryLight
+                        )
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = Color(0xFFE8F5E9)
+                        ) {
+                            Text(
+                                text = "LIVE HELPDESK",
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = VegGreen,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
 
+                    if (contactInfo.helpDeskDescription.isNotBlank()) {
+                        Text(
+                            text = contactInfo.helpDeskDescription,
+                            fontSize = 11.sp,
+                            color = TextSecondaryLight,
+                            lineHeight = 15.sp,
+                            modifier = Modifier.padding(top = 4.dp, bottom = 10.dp)
+                        )
+                    } else {
+                        Spacer(modifier = Modifier.height(10.dp))
+                    }
+
+                    // Direct Call Action
                     ContactRow(
                         icon = Icons.Default.Call,
                         title = "Call Restaurant Help Desk",
-                        subtitle = "+91 98765 12345 (10 AM - 11 PM)"
+                        subtitle = "${contactInfo.supportPhone} (${contactInfo.operatingHours})",
+                        iconTint = VegGreen,
+                        iconBackground = Color(0xFFE8F5E9),
+                        onClick = {
+                            val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${contactInfo.supportPhone}"))
+                            runCatching { context.startActivity(intent) }
+                        }
                     )
-                    HorizontalDivider(color = Color(0xFFF1F3F5), modifier = Modifier.padding(vertical = 8.dp))
+
+                    HorizontalDivider(color = Color(0xFFF1F3F5), modifier = Modifier.padding(vertical = 6.dp))
+
+                    // WhatsApp Chat Action
                     ContactRow(
                         icon = Icons.Default.Chat,
-                        title = "WhatsApp Support",
-                        subtitle = "Instant order queries & feedback"
+                        title = "WhatsApp Support & Orders",
+                        subtitle = "Chat with us at ${contactInfo.whatsappNumber}",
+                        iconTint = Color(0xFF059669),
+                        iconBackground = Color(0xFFECFDF5),
+                        onClick = {
+                            val cleanNum = contactInfo.whatsappNumber.replace("+", "").replace(" ", "").replace("-", "")
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/$cleanNum"))
+                            runCatching { context.startActivity(intent) }
+                        }
                     )
-                    HorizontalDivider(color = Color(0xFFF1F3F5), modifier = Modifier.padding(vertical = 8.dp))
+
+                    HorizontalDivider(color = Color(0xFFF1F3F5), modifier = Modifier.padding(vertical = 6.dp))
+
+                    // Email Support Action
                     ContactRow(
-                        icon = Icons.Default.Restaurant,
-                        title = "FSSAI Food Safety License",
-                        subtitle = "Lic. No. 12722055000492"
+                        icon = Icons.Default.Email,
+                        title = "Email Customer Support",
+                        subtitle = contactInfo.supportEmail,
+                        iconTint = ZaykaOrange,
+                        iconBackground = Color(0xFFFFF3E0),
+                        onClick = {
+                            val intent = Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:${contactInfo.supportEmail}"))
+                            runCatching { context.startActivity(intent) }
+                        }
                     )
+
+                    HorizontalDivider(color = Color(0xFFF1F3F5), modifier = Modifier.padding(vertical = 6.dp))
+
+                    // Operating Hours
+                    ContactRow(
+                        icon = Icons.Default.Schedule,
+                        title = "Operating & Kitchen Timings",
+                        subtitle = contactInfo.operatingHours,
+                        iconTint = ZaykaAmber,
+                        iconBackground = Color(0xFFFFFBEB)
+                    )
+
+                    HorizontalDivider(color = Color(0xFFF1F3F5), modifier = Modifier.padding(vertical = 6.dp))
+
+                    // Location / Address
+                    ContactRow(
+                        icon = Icons.Default.LocationOn,
+                        title = "Kitchen & Restaurant Address",
+                        subtitle = contactInfo.address,
+                        iconTint = ZaykaRed,
+                        iconBackground = Color(0xFFFFEBEE)
+                    )
+
+                    HorizontalDivider(color = Color(0xFFF1F3F5), modifier = Modifier.padding(vertical = 6.dp))
+
+                    // FSSAI Food Safety License
+                    ContactRow(
+                        icon = Icons.Default.VerifiedUser,
+                        title = "FSSAI Food Safety License",
+                        subtitle = "Lic. No. ${contactInfo.fssaiNumber}",
+                        iconTint = Color(0xFF1E88E5),
+                        iconBackground = Color(0xFFE3F2FD)
+                    )
+
+                    if (contactInfo.emergencyManagerContact.isNotBlank()) {
+                        HorizontalDivider(color = Color(0xFFF1F3F5), modifier = Modifier.padding(vertical = 6.dp))
+                        ContactRow(
+                            icon = Icons.Default.SupportAgent,
+                            title = "Kitchen / Manager Direct Line",
+                            subtitle = contactInfo.emergencyManagerContact,
+                            iconTint = Color(0xFF6A1B9A),
+                            iconBackground = Color(0xFFF3E5F5),
+                            onClick = {
+                                val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${contactInfo.emergencyManagerContact}"))
+                                runCatching { context.startActivity(intent) }
+                            }
+                        )
+                    }
+
+                    // Help FAQs Accordion
+                    if (contactInfo.faq1Question.isNotBlank() || contactInfo.faq2Question.isNotBlank() || contactInfo.faq3Question.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(14.dp))
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = Color(0xFFF8FAFC),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(bottom = 6.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.QuestionAnswer,
+                                        contentDescription = null,
+                                        tint = ZaykaAmber,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "Frequently Asked Questions",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = TextPrimaryLight
+                                    )
+                                }
+
+                                if (contactInfo.faq1Question.isNotBlank()) {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .clickable { expandedFaq1 = !expandedFaq1 }
+                                            .padding(vertical = 6.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = "Q: ${contactInfo.faq1Question}",
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = TextPrimaryLight,
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                            Icon(
+                                                imageVector = if (expandedFaq1) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                                contentDescription = null,
+                                                tint = TextSecondaryLight,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                        if (expandedFaq1 && contactInfo.faq1Answer.isNotBlank()) {
+                                            Text(
+                                                text = contactInfo.faq1Answer,
+                                                fontSize = 11.sp,
+                                                color = TextSecondaryLight,
+                                                lineHeight = 15.sp,
+                                                modifier = Modifier.padding(top = 4.dp, start = 4.dp)
+                                            )
+                                        }
+                                    }
+                                }
+
+                                if (contactInfo.faq2Question.isNotBlank()) {
+                                    HorizontalDivider(color = Color(0xFFE2E8F0), modifier = Modifier.padding(vertical = 4.dp))
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .clickable { expandedFaq2 = !expandedFaq2 }
+                                            .padding(vertical = 6.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = "Q: ${contactInfo.faq2Question}",
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = TextPrimaryLight,
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                            Icon(
+                                                imageVector = if (expandedFaq2) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                                contentDescription = null,
+                                                tint = TextSecondaryLight,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                        if (expandedFaq2 && contactInfo.faq2Answer.isNotBlank()) {
+                                            Text(
+                                                text = contactInfo.faq2Answer,
+                                                fontSize = 11.sp,
+                                                color = TextSecondaryLight,
+                                                lineHeight = 15.sp,
+                                                modifier = Modifier.padding(top = 4.dp, start = 4.dp)
+                                            )
+                                        }
+                                    }
+                                }
+
+                                if (contactInfo.faq3Question.isNotBlank()) {
+                                    HorizontalDivider(color = Color(0xFFE2E8F0), modifier = Modifier.padding(vertical = 4.dp))
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .clickable { expandedFaq3 = !expandedFaq3 }
+                                            .padding(vertical = 6.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = "Q: ${contactInfo.faq3Question}",
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = TextPrimaryLight,
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                            Icon(
+                                                imageVector = if (expandedFaq3) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                                contentDescription = null,
+                                                tint = TextSecondaryLight,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                        if (expandedFaq3 && contactInfo.faq3Answer.isNotBlank()) {
+                                            Text(
+                                                text = contactInfo.faq3Answer,
+                                                fontSize = 11.sp,
+                                                color = TextSecondaryLight,
+                                                lineHeight = 15.sp,
+                                                modifier = Modifier.padding(top = 4.dp, start = 4.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -663,25 +1165,47 @@ fun ContactRow(
     icon: ImageVector,
     title: String,
     subtitle: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    iconTint: Color = ZaykaRed,
+    iconBackground: Color = Color(0xFFF1F3F5),
+    onClick: (() -> Unit)? = null
 ) {
     Row(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .then(
+                if (onClick != null) {
+                    Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .clickable { onClick() }
+                        .padding(vertical = 4.dp, horizontal = 4.dp)
+                } else {
+                    Modifier.padding(vertical = 4.dp, horizontal = 4.dp)
+                }
+            ),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
             modifier = Modifier
-                .size(36.dp)
+                .size(38.dp)
                 .clip(CircleShape)
-                .background(Color(0xFFF1F3F5)),
+                .background(iconBackground),
             contentAlignment = Alignment.Center
         ) {
-            Icon(imageVector = icon, contentDescription = null, tint = ZaykaRed, modifier = Modifier.size(18.dp))
+            Icon(imageVector = icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(18.dp))
         }
         Spacer(modifier = Modifier.width(12.dp))
-        Column {
+        Column(modifier = Modifier.weight(1f)) {
             Text(text = title, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = TextPrimaryLight)
             Text(text = subtitle, fontSize = 11.sp, color = TextSecondaryLight)
+        }
+        if (onClick != null) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = null,
+                tint = TextMutedLight,
+                modifier = Modifier.size(16.dp)
+            )
         }
     }
 }

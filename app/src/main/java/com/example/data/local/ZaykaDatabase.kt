@@ -5,18 +5,24 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import com.example.data.model.CartItem
+import com.example.data.model.DealEntity
 import com.example.data.model.FoodItem
 import com.example.data.model.OrderEntity
+import com.example.data.model.RestaurantContactEntity
 import com.example.data.model.SavedAddress
+import com.example.data.model.UserEntity
 
 @Database(
     entities = [
         FoodItem::class,
         CartItem::class,
         OrderEntity::class,
-        SavedAddress::class
+        SavedAddress::class,
+        UserEntity::class,
+        DealEntity::class,
+        RestaurantContactEntity::class
     ],
-    version = 1,
+    version = 5,
     exportSchema = false
 )
 abstract class ZaykaDatabase : RoomDatabase() {
@@ -24,6 +30,9 @@ abstract class ZaykaDatabase : RoomDatabase() {
     abstract fun cartDao(): CartDao
     abstract fun orderDao(): OrderDao
     abstract fun addressDao(): AddressDao
+    abstract fun userDao(): UserDao
+    abstract fun dealDao(): DealDao
+    abstract fun contactDao(): ContactDao
 
     companion object {
         @Volatile
