@@ -290,7 +290,7 @@ fun OrderTrackingScreen(
                                 modifier = Modifier
                                     .size(44.dp)
                                     .clip(CircleShape)
-                                    .background(Color(0xFFFFE0B2)),
+                                    .background(Color(0xFFFEF9C3)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
@@ -385,13 +385,13 @@ fun OrderTrackingScreen(
 
                         Surface(
                             shape = RoundedCornerShape(4.dp),
-                            color = Color(0xFFFFF3E0)
+                            color = Color(0xFFFEFCE8)
                         ) {
                             Text(
                                 text = contactInfo.operatingHours,
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.SemiBold,
-                                color = ZaykaOrange,
+                                color = Color(0xFF854D0E),
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                             )
                         }

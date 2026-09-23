@@ -117,6 +117,53 @@ class ZaykaViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /**
+     * Simulates an incoming customer order for testing kitchen alert chime and notification banner.
+     */
+    fun simulateIncomingOrderForTesting() {
+        viewModelScope.launch {
+            val dummyItems = listOf(
+                com.example.data.model.CartItem(
+                    foodItemId = "biryani-1",
+                    name = "Chicken Biryani Special",
+                    category = "Biryani",
+                    basePrice = 280.0,
+                    portion = "Full Handi",
+                    spiceLevel = "Medium Spicy",
+                    finalUnitPrice = 280.0,
+                    quantity = 2,
+                    isVeg = false
+                ),
+                com.example.data.model.CartItem(
+                    foodItemId = "curry-1",
+                    name = "Chicken Butter Masala",
+                    category = "Curry",
+                    basePrice = 340.0,
+                    portion = "Standard",
+                    spiceLevel = "Medium Spicy",
+                    finalUnitPrice = 340.0,
+                    quantity = 1,
+                    isVeg = false
+                )
+            )
+            repository.placeOrder(
+                items = dummyItems,
+                subtotal = 900.0,
+                deliveryFee = 40.0,
+                tax = 45.0,
+                packagingFee = 25.0,
+                discount = 100.0,
+                total = 910.0,
+                appliedCoupon = "ZAYKA100",
+                deliveryType = "DELIVERY",
+                address = "Flat 502, Sky Tower, Sector 18, Noida",
+                instruction = "Deliver hot with extra mint chutney",
+                paymentMethod = "Cash on Delivery"
+            )
+            _isAlarmMutedForCurrentBatch.value = false
+        }
+    }
+
     val savedAddresses: StateFlow<List<SavedAddress>> = repository.allAddresses
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -345,12 +392,6 @@ class ZaykaViewModel(application: Application) : AndroidViewModel(application) {
     fun placeOrder(onSuccess: (Long) -> Unit, onError: ((String) -> Unit)? = null) {
         viewModelScope.launch {
             val user = currentUser.value
-            if (user == null || user.isAnonymous || user.email.isBlank()) {
-                val errorMsg = "Please sign in with Google to place your order."
-                setAuthError(errorMsg)
-                onError?.invoke(errorMsg)
-                return@launch
-            }
             val items = cartItems.value
             if (items.isEmpty()) return@launch
 
@@ -479,6 +520,37 @@ class ZaykaViewModel(application: Application) : AndroidViewModel(application) {
             if (trimmedEmail.isBlank() || trimmedPass.isBlank()) {
                 _authLoading.value = false
                 _authError.value = "Please enter both email and password."
+                return@launch
+            }
+
+            val isAdminChicken = trimmedEmail.equals("zaykachicken@gmail.com", ignoreCase = true) && trimmedPass == "zayka1236"
+            val isDefaultAdmin = trimmedEmail.equals("restaurant@zayka.com", ignoreCase = true) && trimmedPass == "admin123"
+
+            if (isAdminChicken || isDefaultAdmin) {
+                val adminEmail = if (isAdminChicken) "zaykachicken@gmail.com" else "restaurant@zayka.com"
+                val adminName = if (isAdminChicken) "Zayka Chicken Admin" else "Zayka Restaurant Admin"
+                val restaurantUser = com.example.data.model.UserEntity(
+                    email = adminEmail,
+                    displayName = adminName,
+                    passwordHash = trimmedPass,
+                    phone = "+91 98765 12345",
+                    role = "RESTAURANT_ADMIN"
+                )
+                repository.registerUser(restaurantUser)
+                authManager.setUserAccount(
+                    UserAccount(
+                        uid = "restaurant_$adminEmail",
+                        displayName = adminName,
+                        email = adminEmail,
+                        photoUrl = null,
+                        isAnonymous = false,
+                        authProvider = "RestaurantEmail",
+                        role = "RESTAURANT_ADMIN"
+                    )
+                )
+                _authError.value = null
+                _authLoading.value = false
+                onSuccess()
                 return@launch
             }
 
@@ -628,20 +700,25 @@ class ZaykaViewModel(application: Application) : AndroidViewModel(application) {
                 _authError.value = "Invalid restaurant credentials. Please verify your password."
             } else {
                 // If it's the official restaurant default credentials, allow creation or access
-                if (trimmedEmail.equals("restaurant@zayka.com", ignoreCase = true) && trimmedPass == "admin123") {
+                val isAdminChicken = trimmedEmail.equals("zaykachicken@gmail.com", ignoreCase = true) && trimmedPass == "zayka1236"
+                val isDefaultAdmin = trimmedEmail.equals("restaurant@zayka.com", ignoreCase = true) && trimmedPass == "admin123"
+
+                if (isAdminChicken || isDefaultAdmin) {
+                    val adminEmail = if (isAdminChicken) "zaykachicken@gmail.com" else "restaurant@zayka.com"
+                    val adminName = if (isAdminChicken) "Zayka Chicken Admin" else "Zayka Restaurant Admin"
                     val restaurantUser = com.example.data.model.UserEntity(
-                        email = "restaurant@zayka.com",
-                        displayName = "Zayka Restaurant Admin",
-                        passwordHash = "admin123",
+                        email = adminEmail,
+                        displayName = adminName,
+                        passwordHash = trimmedPass,
                         phone = "+91 98765 12345",
                         role = "RESTAURANT_ADMIN"
                     )
                     repository.registerUser(restaurantUser)
                     authManager.setUserAccount(
                         UserAccount(
-                            uid = "restaurant_admin",
-                            displayName = "Zayka Restaurant Admin",
-                            email = "restaurant@zayka.com",
+                            uid = "restaurant_$adminEmail",
+                            displayName = adminName,
+                            email = adminEmail,
                             photoUrl = null,
                             isAnonymous = false,
                             authProvider = "RestaurantEmail",
@@ -705,18 +782,12 @@ class ZaykaViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun signInWithDemoGoogleAccount(
-        name: String = "Yash Rabalam",
-        email: String = "yashrabalam9@gmail.com",
-        onSuccess: () -> Unit = {}
-    ) {
-        authManager.signInWithDemoGoogleAccount(name, email)
-        _authError.value = null
-        onSuccess()
-    }
-
     fun setAuthError(error: String) {
         _authError.value = error
+    }
+
+    fun updateCustomerProfile(name: String, contact: String) {
+        authManager.updateProfile(name, contact)
     }
 
     fun continueAsGuest(onSuccess: () -> Unit = {}) {

@@ -30,8 +30,31 @@ import kotlin.coroutines.resumeWithException
 
 class AuthManager(private val context: Context) {
 
-    private val _currentUser = MutableStateFlow<UserAccount?>(null)
+    private val _currentUser = MutableStateFlow<UserAccount?>(
+        UserAccount(
+            uid = "customer_foodie_101",
+            displayName = "Zayka Foodie",
+            email = "foodie@zayka.delivery",
+            photoUrl = null,
+            isAnonymous = false,
+            authProvider = "Direct",
+            role = "CUSTOMER"
+        )
+    )
     val currentUser: StateFlow<UserAccount?> = _currentUser.asStateFlow()
+
+    fun updateProfile(name: String, phoneOrEmail: String) {
+        val current = _currentUser.value ?: UserAccount(
+            uid = "customer_foodie_101",
+            displayName = name,
+            email = phoneOrEmail,
+            role = "CUSTOMER"
+        )
+        _currentUser.value = current.copy(
+            displayName = name.ifBlank { current.displayName },
+            email = phoneOrEmail.ifBlank { current.email }
+        )
+    }
 
     private val firebaseAuth: FirebaseAuth? = try {
         if (FirebaseApp.getApps(context).isNotEmpty()) {
@@ -52,7 +75,7 @@ class AuthManager(private val context: Context) {
                 if (fbUser != null) {
                     _currentUser.value = mapFirebaseUser(fbUser)
                 } else if (_currentUser.value?.isAnonymous != true) {
-                    // Do not overwrite demo/guest session unless explicitly logged out
+                    // Do not overwrite active guest session unless explicitly logged out
                 }
             }
             val initialUser = firebaseAuth?.currentUser
@@ -81,20 +104,32 @@ class AuthManager(private val context: Context) {
         val credentialManager = CredentialManager.create(activity)
 
         val serverClientId = try {
-            activity.getString(R.string.default_web_client_id)
+            val resId = activity.resources.getIdentifier("default_web_client_id", "string", activity.packageName)
+            val dynamicValue = if (resId != 0) activity.getString(resId).trim() else ""
+            if (dynamicValue.isNotBlank() && !dynamicValue.startsWith("YOUR_")) {
+                dynamicValue
+            } else {
+                activity.getString(R.string.default_web_client_id).trim()
+            }
         } catch (e: Exception) {
-            ""
+            try {
+                activity.getString(R.string.default_web_client_id).trim()
+            } catch (e2: Exception) {
+                ""
+            }
         }
 
-        val effectiveClientId = if (serverClientId.isNotBlank() && !serverClientId.startsWith("YOUR_")) {
-            serverClientId
-        } else {
-            "demo-server-client-id.apps.googleusercontent.com"
+        if (serverClientId.isBlank() || serverClientId.startsWith("YOUR_")) {
+            return@withContext Result.failure(
+                IllegalStateException(
+                    "Google Web Client ID is not configured. Please ensure google-services.json containing the OAuth Web Client ID (client_type 3) is placed in the app directory."
+                )
+            )
         }
 
         val googleIdOption = GetGoogleIdOption.Builder()
             .setFilterByAuthorizedAccounts(false)
-            .setServerClientId(effectiveClientId)
+            .setServerClientId(serverClientId)
             .setAutoSelectEnabled(false)
             .build()
 
@@ -192,22 +227,6 @@ class AuthManager(private val context: Context) {
         } catch (e: Exception) {
             return@withContext Result.failure(e)
         }
-    }
-
-    fun signInWithDemoGoogleAccount(
-        name: String = "Yash Rabalam",
-        email: String = "yashrabalam9@gmail.com"
-    ): UserAccount {
-        val account = UserAccount(
-            uid = "google_yash_demo_101",
-            displayName = name,
-            email = email,
-            photoUrl = null,
-            isAnonymous = false,
-            authProvider = "Google"
-        )
-        _currentUser.value = account
-        return account
     }
 
     fun setUserAccount(account: UserAccount) {

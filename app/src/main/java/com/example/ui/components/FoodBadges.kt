@@ -77,9 +77,9 @@ fun RatingPill(
     modifier: Modifier = Modifier
 ) {
     val bg = when {
-        rating >= 4.0f -> com.example.ui.theme.Tertiary // #16A34A
-        rating >= 3.5f -> com.example.ui.theme.Primary // #EA580C
-        else -> com.example.ui.theme.Secondary // #DC2626
+        rating >= 4.0f -> com.example.ui.theme.Tertiary // #16A34A (Green)
+        rating >= 3.5f -> com.example.ui.theme.Primary // #E11D48 (Crimson Red)
+        else -> com.example.ui.theme.Secondary // #BE123C (Wine Red)
     }
 
     Row(

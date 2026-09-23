@@ -26,9 +26,16 @@ class ZaykaRepository(context: Context) {
     private val dealDao = database.dealDao()
     private val contactDao = database.contactDao()
 
+    val syncManager by lazy { FirebaseSyncManager(this) }
+
     init {
         CoroutineScope(Dispatchers.IO).launch {
             seedInitialDataIfEmpty()
+            try {
+                syncManager.startListeningForOrders()
+            } catch (e: Exception) {
+                // Graceful fallback if Firebase is not yet configured or offline
+            }
         }
     }
 
@@ -71,16 +78,25 @@ class ZaykaRepository(context: Context) {
 
     suspend fun getFoodItemById(id: String): FoodItem? = menuDao.getFoodItemById(id)
 
+    suspend fun saveFoodItem(item: FoodItem) {
+        menuDao.insertItem(item)
+        syncManager.syncFoodItemToCloud(item)
+    }
+
     suspend fun updateItemAvailability(id: String, isAvailable: Boolean) {
         menuDao.updateAvailability(id, isAvailable)
+        val item = getFoodItemById(id)
+        if (item != null) {
+            syncManager.syncFoodItemToCloud(item.copy(isAvailable = isAvailable))
+        }
     }
 
     suspend fun updateItemPrice(id: String, newPrice: Double) {
         menuDao.updatePrice(id, newPrice)
-    }
-
-    suspend fun saveFoodItem(item: FoodItem) {
-        menuDao.insertItem(item)
+        val item = getFoodItemById(id)
+        if (item != null) {
+            syncManager.syncFoodItemToCloud(item.copy(price = newPrice))
+        }
     }
 
     suspend fun deleteFoodItem(id: String) {
@@ -175,7 +191,7 @@ class ZaykaRepository(context: Context) {
             deliveryAddress = address,
             deliveryInstruction = instruction,
             paymentMethod = paymentMethod,
-            status = OrderStatus.CONFIRMED,
+            status = OrderStatus.PLACED,
             orderTimestamp = System.currentTimeMillis(),
             etaMinutes = if (deliveryType == "TAKEAWAY") 15 else 30,
             riderName = "Ramesh Kumar",
@@ -185,10 +201,21 @@ class ZaykaRepository(context: Context) {
 
         val newOrderId = orderDao.insertOrder(order)
         cartDao.clearCart()
+        val placedOrderWithId = order.copy(orderId = newOrderId)
+        syncManager.syncOrderToCloud(newOrderId, placedOrderWithId)
         return newOrderId
     }
 
     suspend fun updateOrderStatus(orderId: Long, status: String) {
+        orderDao.updateOrderStatus(orderId, status)
+        syncManager.updateOrderStatusInCloud(orderId, status)
+    }
+
+    suspend fun getOrderDirect(orderId: Long): OrderEntity? = orderDao.getOrderByIdDirect(orderId)
+
+    suspend fun insertOrderDirect(order: OrderEntity): Long = orderDao.insertOrder(order)
+
+    suspend fun updateOrderStatusLocally(orderId: Long, status: String) {
         orderDao.updateOrderStatus(orderId, status)
     }
 
@@ -456,7 +483,7 @@ class ZaykaRepository(context: Context) {
         }
 
         if (userDao.getUserCount() == 0) {
-            // Seed default restaurant admin and default customer account in Room DB
+            // Seed default restaurant admin in Room DB
             userDao.insertUser(
                 com.example.data.model.UserEntity(
                     email = "restaurant@zayka.com",
@@ -464,15 +491,6 @@ class ZaykaRepository(context: Context) {
                     passwordHash = "admin123",
                     phone = "+91 98765 12345",
                     role = "RESTAURANT_ADMIN"
-                )
-            )
-            userDao.insertUser(
-                com.example.data.model.UserEntity(
-                    email = "yashrabalam9@gmail.com",
-                    displayName = "Yash Rabalam",
-                    passwordHash = "yash123",
-                    phone = "+91 98765 43210",
-                    role = "CUSTOMER"
                 )
             )
         }

@@ -101,8 +101,6 @@ fun CartScreen(
     val authLoading by viewModel.authLoading.collectAsState()
     val authError by viewModel.authError.collectAsState()
 
-    val isGoogleSignedIn = currentUser != null && !currentUser!!.isAnonymous && currentUser!!.email.isNotBlank()
-
     val cartItems by viewModel.cartItems.collectAsState()
     val appliedCoupon by viewModel.appliedCoupon.collectAsState()
     val deliveryType by viewModel.deliveryType.collectAsState()
@@ -172,137 +170,7 @@ fun CartScreen(
                 contentPadding = PaddingValues(top = 14.dp, bottom = 100.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                // Google Account Verification / Sign-In Required Card
-                item {
-                    if (!isGoogleSignedIn) {
-                        Card(
-                            shape = RoundedCornerShape(14.dp),
-                            colors = CardDefaults.cardColors(containerColor = Color.White),
-                            border = androidx.compose.foundation.BorderStroke(1.5.dp, Color(0xFFFFCCBC)),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                            modifier = Modifier.testTag("cart_signin_required_card")
-                        ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                                ) {
-                                    Surface(
-                                        shape = CircleShape,
-                                        color = Color(0xFFFFEBEE),
-                                        modifier = Modifier.size(36.dp)
-                                    ) {
-                                        Box(contentAlignment = Alignment.Center) {
-                                            Icon(
-                                                imageVector = Icons.Default.Lock,
-                                                contentDescription = "Lock",
-                                                tint = ZaykaRed,
-                                                modifier = Modifier.size(20.dp)
-                                            )
-                                        }
-                                    }
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = "Google Sign-In Required",
-                                            fontWeight = FontWeight.ExtraBold,
-                                            fontSize = 15.sp,
-                                            color = TextPrimaryLight
-                                        )
-                                        Text(
-                                            text = "Pehle Google Sign-In karein, fir order place hoga",
-                                            fontSize = 11.sp,
-                                            color = ZaykaRed,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.height(8.dp))
-
-                                Text(
-                                    text = "To ensure live real-time GPS tracking and instant delivery confirmation, please sign in with your Google account.",
-                                    fontSize = 12.sp,
-                                    color = TextSecondaryLight,
-                                    lineHeight = 16.sp
-                                )
-
-                                if (authError != null) {
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Surface(
-                                        shape = RoundedCornerShape(8.dp),
-                                        color = Color(0xFFFFEBEE),
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        Text(
-                                            text = authError ?: "",
-                                            fontSize = 11.sp,
-                                            color = Color.Red,
-                                            modifier = Modifier.padding(8.dp)
-                                        )
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.height(12.dp))
-
-                                // Main Google Sign-In Button
-                                Surface(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(48.dp)
-                                        .clip(RoundedCornerShape(10.dp))
-                                        .border(1.dp, BorderLight, RoundedCornerShape(10.dp))
-                                        .clickable(enabled = !authLoading) {
-                                             if (activity != null) {
-                                                 viewModel.signInWithGoogle(activity, onSuccess = {})
-                                             }
-                                         }
-                                         .testTag("cart_google_signin_btn"),
-                                    shape = RoundedCornerShape(10.dp),
-                                    color = Color.White,
-                                    shadowElevation = 1.dp
-                                ) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .padding(horizontal = 14.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.Center
-                                    ) {
-                                        if (authLoading) {
-                                            CircularProgressIndicator(
-                                                modifier = Modifier.size(18.dp),
-                                                color = ZaykaRed,
-                                                strokeWidth = 2.dp
-                                            )
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Text(
-                                                text = "Signing in with Google...",
-                                                fontSize = 13.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = TextPrimaryLight
-                                            )
-                                        } else {
-                                            Image(
-                                                painter = painterResource(id = R.drawable.ic_google_logo),
-                                                contentDescription = "Google",
-                                                modifier = Modifier.size(20.dp)
-                                            )
-                                            Spacer(modifier = Modifier.width(10.dp))
-                                            Text(
-                                                text = "Sign in with Google",
-                                                fontSize = 13.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = TextPrimaryLight
-                                            )
-                                        }
-                                    }
-                                                                 }
-                             }
-                         }
-                     }
-                 }
-
-                 // Delivery Address Card
+                // Delivery Address Card
                 item {
                     Card(
                         shape = RoundedCornerShape(14.dp),
@@ -808,49 +676,22 @@ fun CartScreen(
                     )
                 }
 
-                if (isGoogleSignedIn) {
-                    Button(
-                        onClick = {
-                            viewModel.placeOrder(onSuccess = { orderId ->
-                                onOrderPlaced(orderId)
-                            })
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = ZaykaRed),
-                        shape = RoundedCornerShape(12.dp),
-                        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp),
-                        modifier = Modifier.testTag("place_order_button")
-                    ) {
-                        Text(
-                            text = "PLACE ORDER ➔",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.ExtraBold
-                        )
-                    }
-                } else {
-                    Button(
-                        onClick = {
-                            if (activity != null) {
-                                viewModel.signInWithGoogle(activity, onSuccess = {})
-                            }
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E293B)),
-                        shape = RoundedCornerShape(12.dp),
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp),
-                        modifier = Modifier.testTag("google_login_before_order_btn")
-                    ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.ic_google_logo),
-                            contentDescription = "Google",
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Google Sign-In to Order",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = Color.White
-                        )
-                    }
+                Button(
+                    onClick = {
+                        viewModel.placeOrder(onSuccess = { orderId ->
+                            onOrderPlaced(orderId)
+                        })
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = ZaykaRed),
+                    shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp),
+                    modifier = Modifier.testTag("place_order_button")
+                ) {
+                    Text(
+                        text = "PLACE ORDER ➔",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.ExtraBold
+                    )
                 }
             }
         }

@@ -59,6 +59,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Store
 import androidx.compose.material.icons.filled.VolumeOff
 import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -297,55 +298,93 @@ fun AdminScreen(
 
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    // Sound Alert Bar
-                    Row(
+                    // Order Receive Alert Sound Bar
+                    Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(Color(0xFF2A2A2A))
-                            .padding(horizontal = 10.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                            .testTag("admin_sound_alert_bar"),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF242424))
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = if (isAdminSoundAlertEnabled) Icons.Default.VolumeUp else Icons.Default.VolumeOff,
-                                contentDescription = null,
-                                tint = if (isAdminSoundAlertEnabled) Color(0xFF00E676) else Color.Gray,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = if (isAdminSoundAlertEnabled) "Order Ringing Alarm: ON" else "Order Ringing Alarm: OFF",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (isAdminSoundAlertEnabled) Color.White else Color.Gray
-                            )
-                        }
-
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            TextButton(
-                                onClick = { OrderAlertSoundManager.playSingleBeep(context) },
-                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
+                        Column(modifier = Modifier.padding(10.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Icon(Icons.Default.PlayArrow, contentDescription = null, tint = ZaykaOrange, modifier = Modifier.size(14.dp))
-                                Spacer(modifier = Modifier.width(2.dp))
-                                Text("Test Ring", fontSize = 10.sp, color = ZaykaOrange, fontWeight = FontWeight.SemiBold)
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = if (unacceptedOrders.isNotEmpty() && !isAlarmMutedForCurrentBatch && isAdminSoundAlertEnabled) Icons.Default.RingVolume else if (isAdminSoundAlertEnabled) Icons.Default.VolumeUp else Icons.Default.VolumeOff,
+                                        contentDescription = "Sound Status",
+                                        tint = if (unacceptedOrders.isNotEmpty() && !isAlarmMutedForCurrentBatch && isAdminSoundAlertEnabled) Color(0xFFFF1744) else if (isAdminSoundAlertEnabled) Color(0xFF00E676) else Color.Gray,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Column {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(
+                                                text = "Order Receive Alert ⚠️ Sound",
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color.White
+                                            )
+                                            if (unacceptedOrders.isNotEmpty() && !isAlarmMutedForCurrentBatch && isAdminSoundAlertEnabled) {
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Surface(
+                                                    color = Color(0xFFFF1744),
+                                                    shape = RoundedCornerShape(4.dp)
+                                                ) {
+                                                    Text(
+                                                        text = "RINGING 🔔",
+                                                        fontSize = 9.sp,
+                                                        fontWeight = FontWeight.ExtraBold,
+                                                        color = Color.White,
+                                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                        Text(
+                                            text = if (isAdminSoundAlertEnabled) "Continuous chime on new orders" else "Sound alerts disabled",
+                                            fontSize = 10.sp,
+                                            color = if (isAdminSoundAlertEnabled) Color(0xFFB0BEC5) else Color.Gray
+                                        )
+                                    }
+                                }
+
+                                Switch(
+                                    checked = isAdminSoundAlertEnabled,
+                                    onCheckedChange = { viewModel.toggleAdminSoundAlert() },
+                                    colors = SwitchDefaults.colors(
+                                        checkedThumbColor = Color.White,
+                                        checkedTrackColor = VegGreen,
+                                        uncheckedThumbColor = Color.LightGray,
+                                        uncheckedTrackColor = Color.DarkGray
+                                    ),
+                                    modifier = Modifier
+                                        .size(width = 36.dp, height = 22.dp)
+                                        .testTag("admin_sound_alert_toggle")
+                                )
                             }
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Switch(
-                                checked = isAdminSoundAlertEnabled,
-                                onCheckedChange = { viewModel.toggleAdminSoundAlert() },
-                                colors = SwitchDefaults.colors(
-                                    checkedThumbColor = Color.White,
-                                    checkedTrackColor = VegGreen,
-                                    uncheckedThumbColor = Color.LightGray,
-                                    uncheckedTrackColor = Color.DarkGray
-                                ),
+
+                            Spacer(modifier = Modifier.height(8.dp))
+                            HorizontalDivider(color = Color(0xFF333333))
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            // Action button: Test Alert Sound
+                            OutlinedButton(
+                                onClick = { OrderAlertSoundManager.playSingleBeep(context) },
+                                shape = RoundedCornerShape(6.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = ZaykaOrange),
                                 modifier = Modifier
-                                    .size(width = 36.dp, height = 22.dp)
-                                    .testTag("admin_sound_alert_toggle")
-                            )
+                                    .fillMaxWidth()
+                                    .testTag("btn_test_order_sound")
+                            ) {
+                                Icon(Icons.Default.VolumeUp, contentDescription = null, tint = ZaykaOrange, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("🔊 Test Audio Chime", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                            }
                         }
                     }
                 }
@@ -830,7 +869,7 @@ fun IncomingOrderRingingBanner(
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                text = "🔔 NEW ORDER RINGING!",
+                                text = "⚠️ NEW ORDER RECEIVED!",
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = Color(0xFFD50000)
@@ -852,7 +891,7 @@ fun IncomingOrderRingingBanner(
                             }
                         }
                         Text(
-                            text = if (isMuted) "Sound muted • Awaiting kitchen acceptance" else "Alarm ringing continuously until order is accepted",
+                            text = if (isMuted) "⚠️ Sound alert muted • Tap Accept to confirm" else "🔔 Loud order alert sound ringing continuously",
                             fontSize = 11.sp,
                             color = Color(0xFF880E4F),
                             fontWeight = FontWeight.Medium
@@ -1047,13 +1086,13 @@ fun AdminOrderCard(
 
                 Surface(
                     shape = RoundedCornerShape(6.dp),
-                    color = if (isPendingPlaced) Color(0xFFFFEBEE) else Color(0xFFFFF3E0)
+                    color = if (isPendingPlaced) Color(0xFFFFEBEE) else Color(0xFFFEFCE8)
                 ) {
                     Text(
                         text = order.status,
                         fontWeight = FontWeight.Bold,
                         fontSize = 11.sp,
-                        color = if (isPendingPlaced) Color(0xFFD50000) else ZaykaOrange,
+                        color = if (isPendingPlaced) Color(0xFFD50000) else Color(0xFF854D0E),
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                     )
                 }
@@ -1854,13 +1893,13 @@ fun AdminDealCard(
                 } else if (deal.flatDiscount > 0) {
                     Surface(
                         shape = RoundedCornerShape(4.dp),
-                        color = Color(0xFFFFF3E0)
+                        color = Color(0xFFFEFCE8)
                     ) {
                         Text(
                             text = "Flat ₹${deal.flatDiscount.toInt()} OFF",
                             fontSize = 10.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFFE65100),
+                            color = Color(0xFF854D0E),
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
                         )
                     }

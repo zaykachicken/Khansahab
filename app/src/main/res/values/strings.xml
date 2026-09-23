@@ -1,4 +1,6 @@
 <resources>
     <string name="app_name">Zayka</string>
-    <string name="default_web_client_id">YOUR_GOOGLE_SERVER_CLIENT_ID.apps.googleusercontent.com</string>
+    <string name="app_name_user">Zayka Delivery</string>
+    <string name="app_name_admin">Zayka Admin</string>
+    <string name="default_web_client_id">701095229515-kccnoijdjfii36ljdhfd35ellllpi6p0.apps.googleusercontent.com</string>
 </resources>

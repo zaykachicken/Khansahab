@@ -186,10 +186,12 @@ fun HomeScreen(
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             if (currentUser != null && !currentUser!!.isAnonymous) {
-                                Image(
-                                    painter = painterResource(id = R.drawable.ic_google_logo),
-                                    contentDescription = "Profile",
-                                    modifier = Modifier.size(20.dp)
+                                val initial = currentUser?.displayName?.firstOrNull()?.uppercase() ?: "U"
+                                Text(
+                                    text = initial,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = ZaykaRed
                                 )
                             } else {
                                 Icon(

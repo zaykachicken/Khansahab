@@ -74,12 +74,13 @@ fun ZaykaMainScreen(
 ) {
     val currentUser by viewModel.currentUser.collectAsState()
     var currentDestination by remember {
-        mutableStateOf<AppDestination>(if (viewModel.currentUser.value != null) AppDestination.Home else AppDestination.Login)
+        mutableStateOf<AppDestination>(AppDestination.Home)
     }
     var trackingOrderId by remember { mutableStateOf<Long?>(null) }
 
     val cartItems by viewModel.cartItems.collectAsState()
     val activeOrders by viewModel.activeOrders.collectAsState()
+    val unacceptedOrders by viewModel.unacceptedOrders.collectAsState()
     val activeTrackingId by viewModel.activeTrackingOrderId.collectAsState()
 
     val totalCartItems = cartItems.sumOf { it.quantity }
@@ -163,28 +164,50 @@ fun ZaykaMainScreen(
                             modifier = Modifier.testTag("nav_item_orders")
                         )
 
-                        // Restaurant Admin (ONLY visible to Admin Google Account)
-                        if (isUserAdmin) {
-                            NavigationBarItem(
-                                selected = currentDestination == AppDestination.Admin,
-                                onClick = { currentDestination = AppDestination.Admin },
-                                icon = {
+                        // Restaurant Admin
+                        NavigationBarItem(
+                            selected = currentDestination == AppDestination.Admin || currentDestination == AppDestination.RestaurantLogin,
+                            onClick = {
+                                if (isUserAdmin) {
+                                    currentDestination = AppDestination.Admin
+                                } else {
+                                    currentDestination = AppDestination.RestaurantLogin
+                                }
+                            },
+                            icon = {
+                                if (unacceptedOrders.isNotEmpty()) {
+                                    BadgedBox(
+                                        badge = {
+                                            Badge(
+                                                containerColor = Color(0xFFFF1744),
+                                                contentColor = Color.White
+                                            ) {
+                                                Text("${unacceptedOrders.size}")
+                                            }
+                                        }
+                                    ) {
+                                        Icon(
+                                            imageVector = if (currentDestination == AppDestination.Admin || currentDestination == AppDestination.RestaurantLogin) Icons.Filled.AdminPanelSettings else Icons.Outlined.AdminPanelSettings,
+                                            contentDescription = "Admin"
+                                        )
+                                    }
+                                } else {
                                     Icon(
-                                        imageVector = if (currentDestination == AppDestination.Admin) Icons.Filled.AdminPanelSettings else Icons.Outlined.AdminPanelSettings,
+                                        imageVector = if (currentDestination == AppDestination.Admin || currentDestination == AppDestination.RestaurantLogin) Icons.Filled.AdminPanelSettings else Icons.Outlined.AdminPanelSettings,
                                         contentDescription = "Admin"
                                     )
-                                },
-                                label = { Text("Admin", fontSize = 11.sp, fontWeight = FontWeight.SemiBold) },
-                                colors = NavigationBarItemDefaults.colors(
-                                    selectedIconColor = Color.White,
-                                    selectedTextColor = com.example.ui.theme.Primary,
-                                    indicatorColor = com.example.ui.theme.Primary,
-                                    unselectedIconColor = com.example.ui.theme.TextSecondaryLight,
-                                    unselectedTextColor = com.example.ui.theme.TextSecondaryLight
-                                ),
-                                modifier = Modifier.testTag("nav_item_admin")
-                            )
-                        }
+                                }
+                            },
+                            label = { Text("Admin", fontSize = 11.sp, fontWeight = FontWeight.SemiBold) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = Color.White,
+                                selectedTextColor = com.example.ui.theme.Primary,
+                                indicatorColor = com.example.ui.theme.Primary,
+                                unselectedIconColor = com.example.ui.theme.TextSecondaryLight,
+                                unselectedTextColor = com.example.ui.theme.TextSecondaryLight
+                            ),
+                            modifier = Modifier.testTag("nav_item_admin")
+                        )
 
                         // Profile
                         NavigationBarItem(
@@ -237,42 +260,23 @@ fun ZaykaMainScreen(
                         }
                     )
                 }
-                AppDestination.Admin -> {
+                AppDestination.Admin, AppDestination.RestaurantLogin -> {
                     if (isUserAdmin) {
                         AdminScreen(
                             viewModel = viewModel,
                             onLogout = { currentDestination = AppDestination.Home }
                         )
                     } else {
-                        HomeScreen(
+                        com.example.ui.screens.RestaurantLoginScreen(
                             viewModel = viewModel,
-                            onNavigateToCart = { currentDestination = AppDestination.Cart },
-                            onNavigateToProfile = { currentDestination = AppDestination.Profile }
-                        )
-                    }
-                }
-                AppDestination.RestaurantLogin -> {
-                    if (isUserAdmin) {
-                        AdminScreen(
-                            viewModel = viewModel,
-                            onLogout = { currentDestination = AppDestination.Home }
-                        )
-                    } else {
-                        HomeScreen(
-                            viewModel = viewModel,
-                            onNavigateToCart = { currentDestination = AppDestination.Cart },
-                            onNavigateToProfile = { currentDestination = AppDestination.Profile }
+                            onLoginSuccess = { currentDestination = AppDestination.Admin },
+                            onBackClick = { currentDestination = AppDestination.Home }
                         )
                     }
                 }
                 AppDestination.Profile -> {
                     ProfileScreen(
                         viewModel = viewModel,
-                        onNavigateToAdmin = {
-                            if (isUserAdmin) {
-                                currentDestination = AppDestination.Admin
-                            }
-                        },
                         onNavigateToLogin = { currentDestination = AppDestination.Login },
                         onNavigateToOrders = { currentDestination = AppDestination.Orders }
                     )

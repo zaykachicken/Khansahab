@@ -37,6 +37,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.QuestionAnswer
 import androidx.compose.material.icons.filled.Schedule
@@ -96,7 +97,6 @@ import com.example.ui.theme.ZaykaRed
 @Composable
 fun ProfileScreen(
     viewModel: ZaykaViewModel,
-    onNavigateToAdmin: () -> Unit,
     onNavigateToLogin: () -> Unit = {},
     onNavigateToOrders: () -> Unit = {},
     modifier: Modifier = Modifier
@@ -108,7 +108,9 @@ fun ProfileScreen(
     val allOrders by viewModel.allOrders.collectAsState()
     val contactInfo by viewModel.restaurantContactInfo.collectAsState()
     var showAddAddressDialog by remember { mutableStateOf(false) }
-    var showSignOutDialog by remember { mutableStateOf(false) }
+    var showEditProfileDialog by remember { mutableStateOf(false) }
+    var editNameInput by remember { mutableStateOf(currentUser?.displayName ?: "Zayka Foodie") }
+    var editContactInput by remember { mutableStateOf(currentUser?.email ?: "") }
     var expandedFaq1 by remember { mutableStateOf(false) }
     var expandedFaq2 by remember { mutableStateOf(false) }
     var expandedFaq3 by remember { mutableStateOf(false) }
@@ -141,14 +143,16 @@ fun ProfileScreen(
                             modifier = Modifier
                                 .size(56.dp)
                                 .clip(CircleShape)
-                                .background(if (currentUser != null && !currentUser!!.isAnonymous) Color(0xFFE8F0FE) else Color(0xFFFFEBEE)),
+                                .background(if (currentUser != null && !currentUser!!.isAnonymous) Color(0xFFFFEBEE) else Color(0xFFF1F3F5)),
                             contentAlignment = Alignment.Center
                         ) {
                             if (currentUser != null && !currentUser!!.isAnonymous) {
-                                Image(
-                                    painter = painterResource(id = R.drawable.ic_google_logo),
-                                    contentDescription = "Google Account",
-                                    modifier = Modifier.size(30.dp)
+                                val initial = currentUser?.displayName?.firstOrNull()?.uppercase() ?: "U"
+                                Text(
+                                    text = initial,
+                                    fontSize = 22.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = ZaykaRed
                                 )
                             } else {
                                 Icon(
@@ -164,28 +168,61 @@ fun ProfileScreen(
 
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = currentUser?.displayName ?: "Guest Foodie",
+                                text = currentUser?.displayName ?: "Zayka Foodie",
                                 fontWeight = FontWeight.ExtraBold,
                                 fontSize = 18.sp,
                                 color = TextPrimaryLight
                             )
                             Text(
-                                text = currentUser?.email?.takeIf { it.isNotBlank() } ?: "Sign in to sync your profile",
+                                text = currentUser?.email?.takeIf { it.isNotBlank() } ?: "Instant Delivery Customer",
                                 fontSize = 12.sp,
                                 color = TextSecondaryLight
                             )
                             Spacer(modifier = Modifier.height(4.dp))
-                            Surface(
-                                shape = RoundedCornerShape(4.dp),
-                                color = if (currentUser != null && !currentUser!!.isAnonymous) Color(0xFFE8F5E9) else Color(0xFFFFF3E0)
-                            ) {
-                                Text(
-                                    text = if (currentUser != null && !currentUser!!.isAnonymous) "✓ Google Authenticated" else "⭐ Guest Mode",
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (currentUser != null && !currentUser!!.isAnonymous) VegGreen else ZaykaOrange,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                )
+                            val authProvider = currentUser?.authProvider ?: "Direct"
+                            when (authProvider) {
+                                "Google" -> {
+                                    Surface(
+                                        shape = RoundedCornerShape(4.dp),
+                                        color = Color(0xFFE8F0FE)
+                                    ) {
+                                        Text(
+                                            text = "✓ Google Verified Account",
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFF1967D2),
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
+                                "Phone" -> {
+                                    Surface(
+                                        shape = RoundedCornerShape(4.dp),
+                                        color = Color(0xFFE8F5E9)
+                                    ) {
+                                        Text(
+                                            text = "📱 Phone OTP Verified",
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFF2E7D32),
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
+                                else -> {
+                                    Surface(
+                                        shape = RoundedCornerShape(4.dp),
+                                        color = Color(0xFFFEFCE8)
+                                    ) {
+                                        Text(
+                                            text = "✓ Active Customer Profile",
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = VegGreen,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -194,64 +231,99 @@ fun ProfileScreen(
                     HorizontalDivider(color = Color(0xFFF1F3F5))
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    // Sign In or Sign Out Action
-                    if (currentUser == null || currentUser!!.isAnonymous) {
-                        OutlinedButton(
-                            onClick = onNavigateToLogin,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(44.dp)
-                                .testTag("profile_sign_in_button"),
-                            shape = RoundedCornerShape(10.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, ZaykaRed),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = ZaykaRed)
-                        ) {
-                            Image(
-                                painter = painterResource(id = R.drawable.ic_google_logo),
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "Sign in with Google",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 13.sp
-                            )
-                        }
-                    } else {
+                    val authProvider = currentUser?.authProvider ?: "Direct"
+                    val isAuthenticated = authProvider == "Google" || authProvider == "Phone"
+
+                    if (!isAuthenticated) {
+                        // Quick Auth Action Row for Google & Phone OTP
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = onNavigateToLogin,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(40.dp)
+                                    .testTag("btn_profile_google_auth"),
+                                shape = RoundedCornerShape(10.dp),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF4285F4)),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF4285F4)),
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Text("Google Sign In", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
+
+                            OutlinedButton(
+                                onClick = onNavigateToLogin,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(40.dp)
+                                    .testTag("btn_profile_phone_auth"),
+                                shape = RoundedCornerShape(10.dp),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF2E7D32)),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF2E7D32)),
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Icon(Icons.Default.Phone, contentDescription = null, modifier = Modifier.size(14.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Phone OTP", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+
+                    // Edit Profile Details Action
+                    OutlinedButton(
+                        onClick = {
+                            editNameInput = currentUser?.displayName ?: "Zayka Foodie"
+                            editContactInput = currentUser?.email ?: ""
+                            showEditProfileDialog = true
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(44.dp)
+                            .testTag("profile_edit_details_button"),
+                        shape = RoundedCornerShape(10.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, ZaykaRed),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = ZaykaRed)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = null,
+                            tint = ZaykaRed,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Edit Profile Details",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp
+                        )
+                    }
+
+                    if (isAuthenticated) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedButton(
+                            onClick = {
+                                viewModel.signOut(context) {
+                                    onNavigateToLogin()
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(40.dp)
+                                .testTag("profile_sign_out_button"),
+                            shape = RoundedCornerShape(10.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, BorderLight),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondaryLight)
                         ) {
                             Text(
-                                text = if (currentUser != null && !currentUser!!.isAnonymous) {
-                                    val roleText = if (currentUser?.role == "RESTAURANT_ADMIN") " • Restaurant Admin" else " • Customer"
-                                    "Signed in via ${currentUser?.authProvider}$roleText"
-                                } else {
-                                    "Signed in as Guest Foodie"
-                                },
-                                fontSize = 12.sp,
-                                color = TextMutedLight
+                                text = "Switch Account / Sign Out",
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 12.sp
                             )
-                            TextButton(
-                                onClick = { showSignOutDialog = true },
-                                modifier = Modifier.testTag("profile_sign_out_button")
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.ExitToApp,
-                                    contentDescription = "Sign Out",
-                                    tint = ZaykaRed,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = "Sign Out",
-                                    color = ZaykaRed,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 12.sp
-                                )
-                            }
                         }
                     }
                 }
@@ -415,66 +487,6 @@ fun ProfileScreen(
                                 )
                             }
                         }
-                    }
-                }
-            }
-        }
-
-        // Quick Switch to Staff / Admin Mode (ONLY visible to Admin)
-        if (currentUser?.isAdmin == true) {
-            item {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onNavigateToAdmin() }
-                        .testTag("staff_admin_card"),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF212121))
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(0xFF333333)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.AdminPanelSettings,
-                                    contentDescription = "Admin",
-                                    tint = ZaykaAmber,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column {
-                                Text(
-                                    text = "Restaurant Staff & Admin Mode",
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 14.sp
-                                )
-                                Text(
-                                    text = "Manage live kitchen orders & menu stock",
-                                    color = Color(0xFFAAAAAA),
-                                    fontSize = 11.sp
-                                )
-                            }
-                        }
-
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                            contentDescription = "Open Admin",
-                            tint = Color.White,
-                            modifier = Modifier.size(20.dp)
-                        )
                     }
                 }
             }
@@ -831,7 +843,7 @@ fun ProfileScreen(
                         title = "Email Customer Support",
                         subtitle = contactInfo.supportEmail,
                         iconTint = ZaykaOrange,
-                        iconBackground = Color(0xFFFFF3E0),
+                        iconBackground = Color(0xFFFEFCE8),
                         onClick = {
                             val intent = Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:${contactInfo.supportEmail}"))
                             runCatching { context.startActivity(intent) }
@@ -1132,27 +1144,51 @@ fun ProfileScreen(
         )
     }
 
-    // Sign Out Confirmation Dialog
-    if (showSignOutDialog) {
+    // Edit Profile Details Dialog
+    if (showEditProfileDialog) {
         AlertDialog(
-            onDismissRequest = { showSignOutDialog = false },
-            title = { Text("Sign Out", fontWeight = FontWeight.Bold) },
+            onDismissRequest = { showEditProfileDialog = false },
+            title = { Text("Customer Profile", fontWeight = FontWeight.Bold) },
             text = {
-                Text("Are you sure you want to sign out of your Google account? You will continue as a guest.")
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = "Update your contact details for live delivery notifications and receipts:",
+                        fontSize = 13.sp,
+                        color = TextSecondaryLight
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = editNameInput,
+                        onValueChange = { editNameInput = it },
+                        label = { Text("Your Name") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = editContactInput,
+                        onValueChange = { editContactInput = it },
+                        label = { Text("Phone Number / Email") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             },
             confirmButton = {
                 Button(
                     onClick = {
-                        showSignOutDialog = false
-                        viewModel.signOut(context, onSignedOut = onNavigateToLogin)
+                        if (editNameInput.isNotBlank()) {
+                            viewModel.updateCustomerProfile(editNameInput.trim(), editContactInput.trim())
+                            showEditProfileDialog = false
+                        }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = ZaykaRed)
                 ) {
-                    Text("Sign Out")
+                    Text("Save Details")
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showSignOutDialog = false }) {
+                TextButton(onClick = { showEditProfileDialog = false }) {
                     Text("Cancel")
                 }
             }

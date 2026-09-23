@@ -1,4 +1,4 @@
-package com.example
+package com.example.user
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -16,12 +16,14 @@ import com.example.ui.theme.MyApplicationTheme
 import com.example.user.ui.UserMainScreen
 
 /**
- * Zayka Food Delivery — Customer Application
+ * USER APP — Standalone Entry Point Activity for Customers
  *
- * Dedicated production user app for discovering dishes, ordering food,
- * tracking deliveries in real time, and managing customer account/addresses.
+ * Launches the customer food delivery interface:
+ * Browse menu, customize meals, manage cart, place orders,
+ * track real-time delivery progress, view order history,
+ * and manage delivery addresses.
  */
-class MainActivity : ComponentActivity() {
+class UserMainActivity : ComponentActivity() {
     private val viewModel: ZaykaViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {

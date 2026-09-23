@@ -90,8 +90,8 @@ fun RestaurantLoginScreen(
     val authLoading by viewModel.authLoading.collectAsState()
     val authError by viewModel.authError.collectAsState()
 
-    var email by remember { mutableStateOf("restaurant@zayka.com") }
-    var password by remember { mutableStateOf("admin123") }
+    var email by remember { mutableStateOf("zaykachicken@gmail.com") }
+    var password by remember { mutableStateOf("zayka1236") }
     var passwordVisible by remember { mutableStateOf(false) }
 
     Box(
@@ -206,7 +206,7 @@ fun RestaurantLoginScreen(
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "Admin ID: restaurant@zayka.com\nPassword: admin123",
+                                text = "Admin ID: zaykachicken@gmail.com\nPassword: zayka1236",
                                 fontSize = 11.sp,
                                 color = Color(0xFFDDDDDD)
                             )

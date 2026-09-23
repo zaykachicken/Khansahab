@@ -3,19 +3,19 @@ package com.example.ui.theme
 import androidx.compose.ui.graphics.Color
 
 // Reference Palette Exact Colors
-// Primary: #EA580C (Vibrant Warm Burnt Orange)
-val Primary = Color(0xFFEA580C)
-val PrimaryDark = Color(0xFF9A3412)
-val PrimaryLight = Color(0xFFFFEDD5)
-val PrimaryContainer = Color(0xFFFFF7ED)
+// Primary: #E11D48 (Rich Crimson Ruby Red - Premium Appetite Food Theme)
+val Primary = Color(0xFFE11D48)
+val PrimaryDark = Color(0xFF9F1239)
+val PrimaryLight = Color(0xFFFFE4E6)
+val PrimaryContainer = Color(0xFFFFF1F2)
 
-// Secondary: #DC2626 (Vibrant Crimson Red)
-val Secondary = Color(0xFFDC2626)
-val SecondaryDark = Color(0xFF991B1B)
-val SecondaryLight = Color(0xFFFEE2E2)
-val SecondaryContainer = Color(0xFFFEF2F2)
+// Secondary: #BE123C (Deep Wine Red Accent)
+val Secondary = Color(0xFFBE123C)
+val SecondaryDark = Color(0xFF881337)
+val SecondaryLight = Color(0xFFFECDD3)
+val SecondaryContainer = Color(0xFFFFF1F2)
 
-// Tertiary: #16A34A (Vibrant Green)
+// Tertiary: #16A34A (Vibrant Fresh Herb Green)
 val Tertiary = Color(0xFF16A34A)
 val TertiaryDark = Color(0xFF166534)
 val TertiaryLight = Color(0xFFDCFCE7)
@@ -31,11 +31,11 @@ val NeutralBackground = Color(0xFFF4F4F5)
 val NeutralSurface = Color(0xFFFFFFFF)
 
 // Core Brand Aliases matching the new design theme
-val ZaykaRed = Primary // #EA580C is the new primary accent
-val ZaykaRedDark = PrimaryDark // #9A3412
-val ZaykaOrange = Primary // #EA580C
-val ZaykaAmber = Color(0xFFF97316)
-val ZaykaYellow = Color(0xFFFBBF24)
+val ZaykaRed = Primary // Primary accent (#E11D48)
+val ZaykaRedDark = PrimaryDark // #9F1239
+val ZaykaOrange = Primary // Replaced with Crimson Red
+val ZaykaAmber = Color(0xFFF59E0B) // Rich Golden Saffron
+val ZaykaYellow = Color(0xFFFBBF24) // Warm Golden Honey
 
 // Food Category Badges & Indicators
 val VegGreen = Tertiary // #16A34A

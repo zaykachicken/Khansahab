@@ -136,14 +136,14 @@ fun OrderHistoryScreen(
                     if (orders.isNotEmpty()) {
                         Surface(
                             shape = RoundedCornerShape(8.dp),
-                            color = Color(0xFFFFF3E0),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, ZaykaOrange.copy(alpha = 0.4f))
+                            color = Color(0xFFFEFCE8),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, ZaykaOrange.copy(alpha = 0.5f))
                         ) {
                             Text(
                                 text = "${orders.size} Total",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = ZaykaOrange,
+                                color = Color(0xFF854D0E),
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                             )
                         }
@@ -393,7 +393,7 @@ fun OrderHistoryCard(
                         OrderStatus.DELIVERED -> Color(0xFFE8F5E9)
                         OrderStatus.CANCELLED -> Color(0xFFFFEBEE)
                         OrderStatus.OUT_FOR_DELIVERY -> Color(0xFFE3F2FD)
-                        else -> Color(0xFFFFF3E0)
+                        else -> Color(0xFFFEFCE8)
                     }
                 ) {
                     Row(

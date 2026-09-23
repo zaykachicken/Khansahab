@@ -22,15 +22,9 @@ class ExampleRobolectricTest {
   }
 
   @Test
-  fun `test demo and guest auth accounts`() {
+  fun `test guest auth account and guest mode`() {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val authManager = com.example.data.repository.AuthManager(context)
-
-    val demoUser = authManager.signInWithDemoGoogleAccount("Yash Rabalam", "yashrabalam9@gmail.com")
-    assertEquals("Yash Rabalam", demoUser.displayName)
-    assertEquals("yashrabalam9@gmail.com", demoUser.email)
-    assertEquals("Google", demoUser.authProvider)
-    org.junit.Assert.assertFalse(demoUser.isAnonymous)
 
     val guestUser = authManager.continueAsGuest()
     org.junit.Assert.assertTrue(guestUser.isAnonymous)

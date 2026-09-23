@@ -1,4 +1,4 @@
-package com.example
+package com.example.admin
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -11,17 +11,21 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import com.example.admin.ui.AdminMainScreen
 import com.example.ui.ZaykaViewModel
 import com.example.ui.theme.MyApplicationTheme
-import com.example.user.ui.UserMainScreen
 
 /**
- * Zayka Food Delivery — Customer Application
+ * ADMIN APP — Standalone Entry Point Activity for Restaurant Owner / Admin
  *
- * Dedicated production user app for discovering dishes, ordering food,
- * tracking deliveries in real time, and managing customer account/addresses.
+ * Dedicated portal for restaurant kitchen & management:
+ * - Restaurant staff authentication (Admin Email & Password)
+ * - Continuous audio chime alert loop for unaccepted incoming orders
+ * - Kitchen order acceptance & status pipeline updates
+ * - Menu inventory, price updates, stock toggle
+ * - Promotional coupons & business profile configuration
  */
-class MainActivity : ComponentActivity() {
+class AdminMainActivity : ComponentActivity() {
     private val viewModel: ZaykaViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -34,7 +38,7 @@ class MainActivity : ComponentActivity() {
 
             MyApplicationTheme(darkTheme = darkTheme) {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    UserMainScreen(viewModel = viewModel)
+                    AdminMainScreen(viewModel = viewModel)
                 }
             }
         }
